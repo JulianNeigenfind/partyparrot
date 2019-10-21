@@ -1,5 +1,11 @@
 $(document).ready(function () {
     const parrotId = "partyParrot";
+    db.collection("users")
+        .doc('gptzR0X8Df2tflNJVjq1')
+        .onSnapshot(function(doc) {
+            setsource(document.getElementById(parrotId), doc.data().src);
+        });
+
     let defaultparrot = "60fpsparrot";
     let currentParrot = defaultparrot;
     let defaultwidth = 101;
@@ -729,6 +735,7 @@ $(document).ready(function () {
             img.src = image.src;
             img.title = getTitle(string);
             if (overwritestandard) {
+                setDbSource(string);
                 currentParrot = string;
             }
         };
@@ -752,6 +759,12 @@ $(document).ready(function () {
         image.src = "https://cultofthepartyparrot.com/parrots/hd/" + string + ".gif";
     }
 
+    function setDbSource(string) {
+        db.collection('users').doc('gptzR0X8Df2tflNJVjq1').update({
+            src: string
+        });
+    }
+
     function resizeParrot(img, px) {
         img.style.width = px + "px";
     }
@@ -767,7 +780,6 @@ $(document).ready(function () {
             currentWidth = img.width - 20;
             img.style.width = currentWidth + "px";
         } else if (map[17]) { /*ctrl: reset*/
-            img.style.width = img.width * 1.2 + "px";
             currentParrot = defaultparrot;
             currentWidth = defaultwidth;
             setsource(img, defaultparrot);
