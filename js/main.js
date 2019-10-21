@@ -744,19 +744,19 @@ $(document).ready(function () {
                 image.onerror = function () {
                     image.onerror = function () {
                         image.onerror = function () {
-                            image.src = "/parrots/hd/parrotnotfound.gif";
+                            image.src = "parrots/hd/parrotnotfound.gif";
                             string = "parrotnotfound";
                             alert("Error 404 - Parrot not found");
                         };
-                        image.src = "/guests/" + string + ".gif";
+                        image.src = "guests/" + string + ".gif";
                     };
-                    image.src = "/guests/hd/" + string + ".gif";
+                    image.src = "guests/hd/" + string + ".gif";
                 };
-                image.src = "/flags/hd/" + string + ".gif";
+                image.src = "flags/hd/" + string + ".gif";
             };
-            image.src = "/parrots/" + string + ".gif";
+            image.src = "parrots/" + string + ".gif";
         };
-        image.src = "/parrots/hd/" + string + ".gif";
+        image.src = "parrots/hd/" + string + ".gif";
     }
 
     function setDbSource(string) {
