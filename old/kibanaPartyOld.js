@@ -1,15 +1,5 @@
 javascript:(function () {
     const parrotId = "partyParrot";
-
-    function onparrot(){
-        $.get('https://julianneigenfind.github.io/partyparrot/', function (data) {
-            var imgs = $('<div/>').html(data).find('img');
-            imgs.each(function (i, img) {
-                alert(img.src);
-            });
-        });
-    }
-
     const bannerId = "banner";
     let defaultparrot = "60fpsparrot";
     let currentParrot = defaultparrot;
@@ -432,7 +422,6 @@ javascript:(function () {
         img.draggable = false;
         img.style.userSelect = "none";
         img.crossOrigin = "anonymous";
-        img.onclick = onparrot;
         return img;
     }
 

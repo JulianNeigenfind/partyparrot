@@ -377,8 +377,8 @@ javascript:(function () {
         $(".dshExitFullScreenButton").remove();
         parrot();
         cutalarms();
-        parrotalarms();
-        resetParrotIfNecessary();
+       /* parrotalarms();
+        resetParrotIfNecessary();*/
     }, 333);
 
     function parrot() {
@@ -386,7 +386,6 @@ javascript:(function () {
         window.onresize = positionParrot;
         if (!document.getElementById(parrotId)) {
             appendToScreen(createImg(d));
-            $('#' + parrotId).load("https://julianneigenfind.github.io/partyparrot/ #" + parrotId);
             positionParrot();
         } else {
             let img = document.getElementById(parrotId);
@@ -412,8 +411,9 @@ javascript:(function () {
     }
 
     function createImg(d) {
-        let img = document.createElement("div");
+        var img = document.createElement("iframe");
         img.id = parrotId;
+        img.src = "https://julianneigenfind.github.io/partyparrot/";
         img.title = getTitle(currentParrot);
         img.style.position = "fixed";
         img.style.zIndex = "2147483646";
