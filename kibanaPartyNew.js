@@ -1,11 +1,8 @@
 javascript:(function () {
     const parrotId = "partyParrot";
     const bannerId = "banner";
-    let defaultparrot = "60fpsparrot";
-    let currentParrot = defaultparrot;
-    let defaultwidth = 101;
-    let currentWidth = defaultwidth;
-    let maxStringLength = 44;
+    const mainSource = "https://cors-anywhere.herokuapp.com/https://partyparrot.000webhostapp.com/currentparrot.gif";
+    const angrySource = "https://cors-anywhere.herokuapp.com/https://partyparrot.000webhostapp.com/parrots/hd/angryparrot.gif";
     const allParrots = [
         {"gif": "parrot.gif", "hd": "hd/parrot.gif", "name": "Parrot"}, {
             "gif": "opensourceparrot.gif",
@@ -360,6 +357,10 @@ javascript:(function () {
             "hd": "hd/maracasparrot.gif",
             "name": "Maracas Parrot"
         }];
+    let defaultwidth = 101;
+    let currentWidth = defaultwidth;
+    let maxStringLength = 44;
+    let imgBase64 = "";
     let highs = gethighs();
     let timeStampRemove = null;
     let containers = $(".react-grid-item.react-draggable.react-resizable").filter(function (index) {
@@ -379,14 +380,12 @@ javascript:(function () {
         cutalarms();
         parrotalarms();
         resetParrotIfNecessary();
-    }, 333);
+    }, 1000);
 
     function parrot() {
         const d = new Date();
-        window.onresize = positionParrot;
         if (!document.getElementById(parrotId)) {
             appendToScreen(createImg(d));
-            positionParrot();
         } else {
             let img = document.getElementById(parrotId);
             let banner = document.getElementById(bannerId);
@@ -400,9 +399,8 @@ javascript:(function () {
         }
     }
 
-    function getTitle(currentParrotString) {
-        return "Current parrot: " + currentParrotString + "\n" +
-            "-----------------------------------------------\n" +
+    function getTitle() {
+        return "-----------------------------------------------\n" +
             "Try the following functions:\n" +
             "-*f* for fullscreen\n" + "-*r* for random parrot\n" +
             "-*+* for bigger parrot\n" + "-*-* for smaller parrot\n" +
@@ -411,72 +409,34 @@ javascript:(function () {
     }
 
     function createImg(d) {
+        let div = document.createElement("div");
+        div.title = getTitle();
+        div.style.position = "fixed";
+        div.style.zIndex = "2147483646";
+        div.style.width = defaultwidth + "px";
+        div.style.left = "0px";
+        div.style.bottom = "-5px";
+        div.draggable = false;
+        div.style.userSelect = "none";
+
         let img = document.createElement("img");
         img.id = parrotId;
-        source(img, d);
-        img.title = getTitle(currentParrot);
-        img.style.position = "fixed";
-        img.style.zIndex = "2147483646";
-        img.style.width = defaultwidth + "px";
-        img.style.left = "0px";
-        img.draggable = false;
-        img.style.userSelect = "none";
-        return img;
-    }
-
-    function source(img, d) {
-        if (d.getDay() === 5) {
-            if (d.getHours() < 12) {
-                return setsource(img, "greeceparrot");
-            }
-            return setsource(img, "beerparrot");
-        } else {
-            return setsource(img, currentParrot);
-        }
-    }
-
-    function setsource(img, string, overwritestandard = true) {
-        string = string.toString().toLowerCase();
-        let image = new Image();
-        image.onload = function () {
-            img.src = image.src;
-            img.title = getTitle(string);
-            if (overwritestandard) {
-                currentParrot = string;
-            }
+        img.crossOrigin = "";
+        img.onload = function () {
+            imgBase64 = getBase64Image(img);
         };
-        image.onerror = function () {
-            image.onerror = function () {
-                image.onerror = function () {
-                    image.onerror = function () {
-                        image.onerror = function () {
-                            image.src = "https://cultofthepartyparrot.com/parrots/hd/parrotnotfound.gif";
-                            string = "parrotnotfound";
-                            alert("Error 404 - Parrot not found");
-                        };
-                        image.src = "https://cultofthepartyparrot.com/guests/" + string + ".gif";
-                    };
-                    image.src = "https://cultofthepartyparrot.com/guests/hd/" + string + ".gif";
-                };
-                image.src = "https://cultofthepartyparrot.com/flags/hd/" + string + ".gif";
-            };
-            image.src = "https://cultofthepartyparrot.com/parrots/" + string + ".gif";
-        };
-        image.src = "https://cultofthepartyparrot.com/parrots/hd/" + string + ".gif";
+        img.src = mainSource;
+
+        div.appendChild(img);
+        return div;
     }
 
     function appendToScreen(element) {
         document.body.prepend(element);
     }
 
-    function positionParrot() {
-        let img = document.getElementById(parrotId);
-        img.style.bottom = "-5px";
-    }
-
     function resizeParrot(img, px) {
         img.style.width = px + "px";
-        positionParrot();
     }
 
     function resetAfter(seconds) {
@@ -492,7 +452,32 @@ javascript:(function () {
                 banner.remove();
             }
             timeStampRemove = null;
+        } else {
+            if(img.src === angrySource)
+                return;
+            let newImg = new Image();
+            newImg.crossOrigin = "";
+            newImg.onload = function(){
+                const newImgBase64 = getBase64Image(newImg);
+                if(imgBase64 !== newImgBase64){
+                    img.src = mainSource+"?"+Date.now();
+                }
+            };
+            newImg.src = mainSource+"?"+Date.now();
         }
+    }
+
+    function getBase64Image(img) {
+        var canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+
+        var dataURL = canvas.toDataURL("image/gif");
+
+        return dataURL.replace(/^data:image\/(gif);base64,/, "");
     }
 
     function cutalarms() {
@@ -533,7 +518,7 @@ javascript:(function () {
         function angryParrot() {
             let img = document.getElementById(parrotId);
             let banner = document.getElementById(bannerId);
-            setsource(img, "angryparrot", false);
+            img.src = angrySource;
             if (!banner) {
                 appendToScreen(createBanner("Neuer High Alarm!", "red", 698));
             }
@@ -571,6 +556,11 @@ javascript:(function () {
         return $("[data-test-subj='embeddablePanelHeading-[MRS]AlarmejeLeveliMosWeb']").parent().find("div:contains('High - Count'):last").parent().find("span:last").html();
     }
 
+    function setsource(string) {
+        $.post('https://cors-anywhere.herokuapp.com/https://partyparrot.000webhostapp.com/main.php', {parrot: string.toLowerCase()}, function (result) {
+        });
+    }
+
     function keyfunctions() {
         let img = document.getElementById(parrotId);
         if (!img) {
@@ -594,9 +584,8 @@ javascript:(function () {
         } else if (map[18]) { /*alt: enter parrot*/
             let string = prompt("Please enter a parrot", "Dadparrot");
             if (string != null) {
-                setsource(img, string);
+                setsource(string);
             }
-            return false;
         } else if (map[77]) { /*m: enter max stringlength*/
             let string = prompt("Enter max. stringlength", "44");
             if (string != null) {
@@ -607,10 +596,10 @@ javascript:(function () {
             if (parrot.hd !== undefined) {
                 let string = parrot.hd.substr(3);
                 string = string.substr(0, string.length - 4);
-                setsource(img, string);
+                setsource(string);
             } else {
                 let string = parrot.gif.substr(0, parrot.gif.length - 4);
-                setsource(img, string);
+                setsource(string);
             }
         }
     }
