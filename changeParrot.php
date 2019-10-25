@@ -1,17 +1,16 @@
 <?php
+header("Access-Control-Allow-Origin: *");
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+header('Access-Control-Allow-Headers: X-Requested-With');
 $path = dirname(__FILE__) . DIRECTORY_SEPARATOR;
 $currentparrotfile = $path . 'currentparrot.gif';
 
-$string = strtolower($_POST["parrot"]);
+$string = trim(strtolower($_POST["parrot"]));
 $file = $path . "parrots" . DIRECTORY_SEPARATOR . "hd". DIRECTORY_SEPARATOR . $string . ".gif";
 
 function i($file)
 {
-    echo $file;
-    if(file_exists($file))
-        echo " exists ";
-    else
-        echo " doesntexist ";
     return file_exists($file);
 }
 
@@ -22,11 +21,7 @@ if (!i($file)) $file = $path . "guests"  . DIRECTORY_SEPARATOR . "hd"   . DIRECT
 if (!i($file)) $file = $path . "guests"  . DIRECTORY_SEPARATOR . $string . ".gif";
 if (!i($file)) $file = $path . "parrots" . DIRECTORY_SEPARATOR . "hd"   . DIRECTORY_SEPARATOR . "parrotnotfound.gif";
 
-if (i($file)){
+if (i($file)) {
     copy($file, $currentparrotfile);
-    echo "successful";
-}else{
-    echo "unsuccessful";
+    echo $string;
 }
-
-echo " ".$file;
