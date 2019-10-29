@@ -1,3 +1,4 @@
 javascript:(function () {
-    $('#partyParrot').load('https://partyparrot.000webhostapp.com/main.php #partyParrot');
+    let button = document.getElementsByClassName("dshExitFullScreenButton")[0];
+    alert(button);
 })();

@@ -1,10 +1,49 @@
-*{
+* {
     display: block;
     margin-left: auto;
     margin-right: auto;
-    width: 101px;
+    width: 86%;
+    position: relative;
+    text-align: center;
+    font-size: 16px;
 }
 
-script{
+script,title {
     display: none;
+}
+
+#content {
+    margin-top: 30%;
+}
+
+.room {
+    height: 20px;
+}
+
+.changebutton,.sizebutton{
+    -webkit-appearance: none;
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 10px;
+    cursor: pointer;
+    margin-top: 4px;
+}
+
+#sizesector{
+    width: 38px;
+}
+
+#inputsector{
+    padding-top: 17px;
+}
+
+#sectors{
+    display: flex;
+}
+
+@media only screen and (min-width: 768px) {
+    * {
+        width: 70%;
+    }
 }
