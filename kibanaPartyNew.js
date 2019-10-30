@@ -95,6 +95,7 @@ javascript:(function () {
             let banner = document.getElementById(bannerId);
             for (let i = 0; i <= 24; i++) {
                 if (d.getHours() === i && d.getMinutes() === 0 && d.getSeconds() === 0 && !banner) {
+                    dontRefresh = true;
                     resizeParrot(313, false);
                     createBanner("Es ist " + i + " Uhr!", "orange", 562);
                     resetAfter(30);
@@ -368,7 +369,8 @@ javascript:(function () {
     function GoInFullscreen() {
         let fullscreenbutton = document.querySelector("[data-test-subj='dashboardFullScreenMode']");
         if (fullscreenbutton != null) {
-            eventFire(fullscreenbutton, "click");
+            fullscreenbutton.click();
+            removeButton();
         }
         let i = document.documentElement;
         if (i.requestFullscreen) {
@@ -379,16 +381,6 @@ javascript:(function () {
             i.mozRequestFullScreen();
         } else if (i.msRequestFullscreen) {
             i.msRequestFullscreen();
-        }
-    }
-
-    function eventFire(el, etype) {
-        if (el.fireEvent) {
-            el.fireEvent('on' + etype);
-        } else {
-            var evObj = document.createEvent('Events');
-            evObj.initEvent(etype, true, false);
-            el.dispatchEvent(evObj);
         }
     }
 

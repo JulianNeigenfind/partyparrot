@@ -82,18 +82,25 @@
     <img id="partyParrot" src="currentparrot.gif" alt="parrot">
     <div class="room"></div>
     <div id="sectors">
-        <div id="inputsector">
+        <div id="mutesector" class="sector">
+            <button id="mutebutton"><img id="mutebuttonimg" src="additionalmedia/mute.png" alt="mute"></button>
+        </div>
+        <div id="inputsector" class="sector">
             <form id="form">
                 <input id="parrot" type="text" placeholder="Enter parrot" name="parrot">
-                <input class=changebutton type="submit" value="Change parrot">
+                <button id="changebutton" type="submit">Change parrot</button>
+                <button id="randombutton">Random</button>
             </form>
         </div>
-        <div id="sizesector">
-            <button id="plusbutton" class="sizebutton">+</button>
-            <div id="size"></div>
-            <button id="minusbutton" class="sizebutton">-</button>
+        <div id="sizesector" class="sector">
+            <button id="plusbutton">+</button>
+            <input id="size" class="round" type="number" placeholder="size" name="size">
+            <button id="minusbutton">-</button>
         </div>
     </div>
+</div>
+<div id="thumbnails">
+    <div class="loader"></div>
 </div>
 
 </body>

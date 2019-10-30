@@ -19,13 +19,35 @@ function searchForFile($string)
     return $file;
 }
 
-function randomFile(){
+function randomFile()
+{
+    $files = allFiles();
+    return $files[array_rand($files)];
+}
+
+function allFiles()
+{
     $Directory = new RecursiveDirectoryIterator(dirname(__FILE__) . DIRECTORY_SEPARATOR);
     $Iterator = new RecursiveIteratorIterator($Directory);
     $Regex = new RegexIterator($Iterator, '/^.+\.gif$/i', RecursiveRegexIterator::GET_MATCH);
     $files = array();
     foreach ($Regex as $info) {
-        $files[] = $info[0];
+        if (!in_array($info[0], $files))
+            $files[] = $info[0];
     }
-    return $files[array_rand($files)];
+    return $files;
 }
+
+function allFileNames()
+{
+    $filenames = array();
+
+    foreach (allFiles() as $file) {
+        $path_parts = pathinfo($file);
+        $filename = $path_parts['filename'];
+        if (!in_array($filename, $filenames))
+            $filenames[] = $filename;
+    }
+    return $filenames;
+}
+

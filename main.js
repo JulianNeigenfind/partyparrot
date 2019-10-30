@@ -11,28 +11,32 @@ function main() {
     const domain = 'https://changepartyparrot.000webhostapp.com';
     let mainSource = "";
     let currentWidth;
+    let alarmpause;
+    let mutesource;
+    let alarmsource;
     markText();
-    document.getElementById("form").addEventListener("submit", function (evt) {
-        evt.preventDefault();
-        const data = new URLSearchParams();
-        let input = document.getElementById("parrot");
-        data.append(input.name, input.value);
-        const url = domain + '/changeParrot.php';
-
-        fetch(url, {
-            method: 'POST',
-            body: data,
-        }).then(function (response) {
-            fetchNow("currentParrot", false,
-                function (object) {
-                    mainSource = object.base64;
-                }
-            );
-        });
-        return false;
+    fetchNow("mute", false, function (object){
+        mutesource = object.base64;
     });
+    fetchNow("alarm", false, function (object){
+        alarmsource = object.base64;
+    });
+    fetchcurrent(true);
+    let banner = document.querySelector("a[title*='000webhost']");
+    if(banner != null) banner.parentNode.removeChild(banner);
+    setInterval(function () {
+        let img = document.getElementById("partyParrot");
+        if (img.src !== mainSource) {
+            img.src = mainSource;
+            markText();
+        }
+        let size = document.getElementById("size");
+        if(size !== document.activeElement)
+            size.value = currentWidth;
+    }, 1000);
+    loadAllParrots();
 
-    const fetchNow = function (parrot, recursive, processResponse) {
+    function fetchNow (parrot, recursive, processResponse) {
         const url = new URL(domain + '/getParrot.php');
         url.search = new URLSearchParams({"parrot": parrot}).toString();
 
@@ -45,33 +49,34 @@ function main() {
                         fetchNow(parrot, true, processResponse);
                     }, intervalInMs);
             })
-        }).catch(function (err) {
+        }).catch(function (ignored) {
             if (recursive)
                 setTimeout(function () {
                     fetchNow(parrot, true, processResponse);
                 }, intervalInMs);
         });
-    };
+    }
 
     function fetchcurrent(recursive) {
         fetchNow("currentParrot", recursive, function (object) {
             mainSource = object.base64;
             currentWidth = parseInt(object.width);
-            /* setAlarmpause(object.alarmpause === "true", false);*/
+            setAlarmpause(object.alarmpause === "true", false);
         });
     }
 
-    fetchcurrent(true);
-    let banner = document.querySelector("a[title*='000webhost']");
-    banner.parentNode.removeChild(banner);
-    setInterval(function () {
-        let img = document.getElementById("partyParrot");
-        if (img.src !== mainSource) {
-            img.src = mainSource;
-            markText();
-        }
-        document.getElementById("size").innerText = currentWidth;
-    }, 1000);
+    function setsource(parrot) {
+        const data = new URLSearchParams();
+        data.append("parrot", parrot);
+        const url = domain + '/changeParrot.php';
+
+        fetch(url, {
+            method: 'POST',
+            body: data,
+        }).then(function (response) {
+            fetchcurrent(false);
+        });
+    }
 
     function resizeParrot(px, post) {
         currentWidth = px;
@@ -96,6 +101,68 @@ function main() {
         input.focus();
         input.setSelectionRange(0, len);
     }
+
+    function setAlarmpause(boolean, post) {
+        setMute(boolean);
+        if (post) {
+            const url = domain + '/changeParrot.php';
+            const data = new URLSearchParams();
+            data.append("alarmpause", boolean);
+
+            fetch(url, {
+                method: 'POST',
+                body: data,
+            });
+        }
+    }
+
+    function setMute(boolean){
+        alarmpause = boolean;
+        document.getElementById("mutebuttonimg").src = alarmpause ? mutesource : alarmsource;
+    }
+
+    function loadAllParrots(){
+        fetchNow("all", false, object => {
+            for(let parrot of object){
+                let img = document.createElement("img");
+                img.classList.add("thumbnail");
+                img.src = parrot.base64;
+                img.title = parrot.parrot;
+                img.addEventListener("click", event =>{
+                    setsource(parrot.parrot);
+                });
+                document.getElementById("thumbnails").prepend(img);
+            }
+            let loader = document.getElementsByClassName("loader")[0];
+            loader.parentNode.removeChild(loader);
+        });
+    }
+
+    document.getElementById("form").addEventListener("submit", event => {
+        event.preventDefault();
+        let input = document.getElementById("parrot");
+        setsource(input.value);
+        return false;
+    });
+
+    document.getElementById("size").addEventListener("keydown", event => {
+        if(event.keyCode === 13){
+            let int = parseInt(event.target.value);
+            if(isNaN(int) || int < 0 || int > 999)
+                int = 100;
+            resizeParrot(int, true);
+            event.target.blur();
+        }
+    });
+
+    document.getElementById("randombutton").addEventListener("click", event => {
+        event.preventDefault();
+        setsource("random");
+    });
+
+    document.getElementById("mutebutton").addEventListener("click", event => {
+       setAlarmpause(!alarmpause, true);
+    });
 
     document.getElementById("plusbutton").addEventListener("click", function increaseSize() {
         resizeParrot(currentWidth + 20, true);
