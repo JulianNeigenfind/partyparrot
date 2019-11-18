@@ -15,6 +15,7 @@ function searchForFile($string)
     if (!file_exists($file)) $file = $path . "flags" . DIRECTORY_SEPARATOR . $string . ".gif";
     if (!file_exists($file)) $file = $path . "guests" . DIRECTORY_SEPARATOR . "hd" . DIRECTORY_SEPARATOR . $string . ".gif";
     if (!file_exists($file)) $file = $path . "guests" . DIRECTORY_SEPARATOR . $string . ".gif";
+    if (!file_exists($file)) $file = $path . "extras" . DIRECTORY_SEPARATOR . $string . ".gif";
     if (!file_exists($file)) $file = $path . "parrots" . DIRECTORY_SEPARATOR . "hd" . DIRECTORY_SEPARATOR . "parrotnotfound.gif";
     return $file;
 }

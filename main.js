@@ -14,6 +14,8 @@ function main() {
     let alarmpause;
     let mutesource;
     let alarmsource;
+
+    createImg();
     markText();
     fetchNow("mute", false, function (object){
         mutesource = object.base64;
@@ -26,7 +28,7 @@ function main() {
     if(banner != null) banner.parentNode.removeChild(banner);
     setInterval(function () {
         let img = document.getElementById("partyParrot");
-        if (img.src !== mainSource) {
+        if (img && img.src !== mainSource) {
             img.src = mainSource;
             markText();
         }
@@ -35,6 +37,19 @@ function main() {
             size.value = currentWidth;
     }, 1000);
     loadAllParrots();
+
+
+    function createImg() {
+        let img = document.createElement("img");
+        img.id = "partyParrot";
+        img.onload = function () {
+            let imgloader = document.getElementById("imgloader");
+            if (imgloader != null) imgloader.parentNode.removeChild(imgloader);
+            img.onload = function () {
+            };
+        };
+        document.getElementById("content").prepend(img);
+    }
 
     function fetchNow (parrot, recursive, processResponse) {
         const url = new URL(domain + '/getParrot.php');
@@ -133,8 +148,8 @@ function main() {
                 });
                 document.getElementById("thumbnails").prepend(img);
             }
-            let loader = document.getElementsByClassName("loader")[0];
-            loader.parentNode.removeChild(loader);
+            let loader = document.getElementById("thumbnailloader");
+            if(loader != null) loader.parentNode.removeChild(loader);
         });
     }
 
