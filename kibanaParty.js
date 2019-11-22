@@ -1,6 +1,6 @@
 javascript:(function () {
     const intervalInMs = 5000;
-    const domain = 'https://changepartyparrot.000webhostapp.com';
+    const domain = 'http://neigenfind.bplaced.net/'/*'https://changepartyparrot.000webhostapp.com'*/;
     const parrotId = "partyParrotTest";
     const bannerId = "banner";
     const defaultparrot = "60fpsparrot";
@@ -47,6 +47,37 @@ javascript:(function () {
         });
     };
 
+    function fetchcurrent() {
+        fetchNow("currentParrot", false, function (object) {
+            mainSource = object.base64;
+            currentWidth = object.width;
+            let img = document.getElementById(parrotId);
+            if (dontRefresh || !img) {
+                return;
+            }
+            if (img.src !== mainSource)
+                img.src = mainSource;
+            if (img.style.width !== currentWidth + "px")
+                resizeParrot(currentWidth, false);
+            setAlarmpause(object.alarmpause === "true", false);
+        });
+    }
+
+    function fetchcurrentrecursivelywithcheck() {
+        const url = new URL(domain + '/getParrot.php');
+        url.search = new URLSearchParams({"parrot": "changed"}).toString();
+        fetch(url).then(function (response) {
+            response.text().then(function (changed) {
+                if (changed === '1') {
+                    fetchcurrent()
+                }
+                setTimeout(function () {
+                    fetchcurrentrecursivlywithcheck();
+                }, intervalInMs);
+            })
+        });
+    }
+
     removeButton();
     fetchNow("angryparrot", false, function (object) {
         angrySource = object.base64;
@@ -57,19 +88,8 @@ javascript:(function () {
     fetchNow("thomas", false, function (object) {
         resetSource = object.base64;
     });
-    fetchNow("currentParrot", true, function (object) {
-        mainSource = object.base64;
-        currentWidth = object.width;
-        let img = document.getElementById(parrotId);
-        if (dontRefresh || !img) {
-            return;
-        }
-        if (img.src !== mainSource)
-            img.src = mainSource;
-        if (img.style.width !== currentWidth + "px")
-            resizeParrot(currentWidth, false);
-        setAlarmpause(object.alarmpause === "true", false);
-    });
+    fetchcurrent();
+    fetchcurrentrecursivelywithcheck();
     setInterval(function () {
         parrot();
         cutalarms();

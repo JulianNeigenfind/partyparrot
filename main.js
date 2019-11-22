@@ -8,7 +8,7 @@
 
 function main() {
     const intervalInMs = 5000;
-    const domain = 'https://changepartyparrot.000webhostapp.com';
+    const domain = 'http://neigenfind.bplaced.net/'/*'https://changepartyparrot.000webhostapp.com'*/;
     let mainSource = "";
     let currentWidth;
     let alarmpause;
@@ -16,24 +16,23 @@ function main() {
     let alarmsource;
 
     createImg();
-    markText();
-    fetchNow("mute", false, function (object){
+    fetchNow("mute", false, function (object) {
         mutesource = object.base64;
     });
-    fetchNow("alarm", false, function (object){
+    fetchNow("alarm", false, function (object) {
         alarmsource = object.base64;
     });
-    fetchcurrent(true);
+    fetchcurrent();
+    fetchcurrentrecursivelywithcheck();
     let banner = document.querySelector("a[title*='000webhost']");
-    if(banner != null) banner.parentNode.removeChild(banner);
+    if (banner != null) banner.parentNode.removeChild(banner);
     setInterval(function () {
         let img = document.getElementById("partyParrot");
         if (img && img.src !== mainSource) {
             img.src = mainSource;
-            markText();
         }
         let size = document.getElementById("size");
-        if(size !== document.activeElement)
+        if (size !== document.activeElement)
             size.value = currentWidth;
     }, 1000);
     loadAllParrots();
@@ -51,7 +50,7 @@ function main() {
         document.getElementById("content").prepend(img);
     }
 
-    function fetchNow (parrot, recursive, processResponse) {
+    function fetchNow(parrot, recursive, processResponse) {
         const url = new URL(domain + '/getParrot.php');
         url.search = new URLSearchParams({"parrot": parrot}).toString();
 
@@ -72,11 +71,26 @@ function main() {
         });
     }
 
-    function fetchcurrent(recursive) {
-        fetchNow("currentParrot", recursive, function (object) {
+    function fetchcurrent() {
+        fetchNow("currentParrot", false, function (object) {
             mainSource = object.base64;
             currentWidth = parseInt(object.width);
             setAlarmpause(object.alarmpause === "true", false);
+        });
+    }
+
+    function fetchcurrentrecursivelywithcheck() {
+        const url = new URL(domain + '/getParrot.php');
+        url.search = new URLSearchParams({"parrot": "changed"}).toString();
+        fetch(url).then(function (response) {
+            response.text().then(function (changed) {
+                if (changed === '1') {
+                    fetchcurrent()
+                }
+                setTimeout(function () {
+                    fetchcurrentrecursivelywithcheck();
+                }, intervalInMs);
+            })
         });
     }
 
@@ -89,7 +103,7 @@ function main() {
             method: 'POST',
             body: data,
         }).then(function (response) {
-            fetchcurrent(false);
+            fetchcurrent();
         });
     }
 
@@ -105,16 +119,9 @@ function main() {
                 method: 'POST',
                 body: data,
             }).then(function () {
-                fetchcurrent(false);
+                fetchcurrent();
             });
         }
-    }
-
-    function markText() {
-        let input = document.getElementById("parrot");
-        let len = input.value.length;
-        input.focus();
-        input.setSelectionRange(0, len);
     }
 
     function setAlarmpause(boolean, post) {
@@ -131,43 +138,75 @@ function main() {
         }
     }
 
-    function setMute(boolean){
+    function setMute(boolean) {
         alarmpause = boolean;
         document.getElementById("mutebuttonimg").src = alarmpause ? mutesource : alarmsource;
     }
 
-    function loadAllParrots(){
+    function loadAllParrots() {
         fetchNow("all", false, object => {
-            for(let parrot of object){
+            for (let parrot of object) {
                 let img = document.createElement("img");
                 img.classList.add("thumbnail");
                 img.src = parrot.base64;
                 img.title = parrot.parrot;
-                img.addEventListener("click", event =>{
+                img.addEventListener("click", event => {
                     setsource(parrot.parrot);
                 });
                 document.getElementById("thumbnails").prepend(img);
             }
             let loader = document.getElementById("thumbnailloader");
-            if(loader != null) loader.parentNode.removeChild(loader);
+            if (loader != null) loader.parentNode.removeChild(loader);
+            onlyShowMatchingThumbnails(document.getElementById("parrot").value);
         });
+    }
+
+    function resetThumbnails() {
+        let children = document.getElementById("thumbnails").children;
+        for (let child of children) {
+            child.style.display = "";
+        }
     }
 
     document.getElementById("form").addEventListener("submit", event => {
         event.preventDefault();
+        let string;
         let input = document.getElementById("parrot");
-        setsource(input.value);
+        let shownElements = document.getElementById("thumbnails").querySelectorAll('img:not([style*="display:none"]):not([style*="display: none"])');
+        if (shownElements.length === 1) {
+            string = shownElements[0].title;
+        } else {
+            string = input.value;
+        }
+        setsource(string);
+        input.value = "";
+        resetThumbnails();
         return false;
     });
 
     document.getElementById("size").addEventListener("keydown", event => {
-        if(event.keyCode === 13){
+        if (event.keyCode === 13) {
             let int = parseInt(event.target.value);
-            if(isNaN(int) || int < 0 || int > 999)
+            if (isNaN(int) || int < 0 || int > 999)
                 int = 100;
             resizeParrot(int, true);
             event.target.blur();
         }
+    });
+
+    function onlyShowMatchingThumbnails(searchstring) {
+        let children = document.getElementById("thumbnails").children;
+        for (let child of children) {
+            if (child.title.toLowerCase().trim().indexOf(searchstring) > -1) {
+                child.style.display = "";
+            } else {
+                child.style.display = "none";
+            }
+        }
+    }
+
+    document.getElementById("parrot").addEventListener("input", event => {
+        onlyShowMatchingThumbnails(event.target.value.toLowerCase().trim());
     });
 
     document.getElementById("randombutton").addEventListener("click", event => {
@@ -176,7 +215,7 @@ function main() {
     });
 
     document.getElementById("mutebutton").addEventListener("click", event => {
-       setAlarmpause(!alarmpause, true);
+        setAlarmpause(!alarmpause, true);
     });
 
     document.getElementById("plusbutton").addEventListener("click", function increaseSize() {

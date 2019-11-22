@@ -82,6 +82,7 @@ input,button{
 .thumbnail {
     width: 40px;
     margin: 10px 25px 10px 25px;
+    cursor: pointer;
 }
 
 #thumbnails {

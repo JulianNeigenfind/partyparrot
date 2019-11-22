@@ -9,6 +9,15 @@ if (!isset($_GET["parrot"])) {
 }
 $string = trim(strtolower($_GET["parrot"]));
 
+if($string == "changed"){
+    $timechange = file_get_contents("changed.txt");
+    if(time() - $timechange > 10 )
+        echo 0;
+    else
+        echo 1;
+    return;
+}
+
 if($string == "currentparrot"){
     echo file_get_contents("currentparrot.json");
     return;

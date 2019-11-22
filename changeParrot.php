@@ -40,8 +40,10 @@ if (file_exists($file)) {
     $arr = array('parrot' => $parameters["parrot"], 'width' => $parameters["width"], 'alarmpause' => $parameters["alarmpause"], 'base64' => $base64);
     $json = json_encode($arr);
 
-    if (file_put_contents("currentparrot.json", $json))
+    if (file_put_contents("currentparrot.json", $json)){
+        file_put_contents("changed.txt", time());
         echo "Erfolgreich geändert";
+    }
     else
         echo "Ups! Da ist was schiefgelaufen";
 }
