@@ -11,7 +11,7 @@ $string = trim(strtolower($_GET["parrot"]));
 
 if($string == "changed"){
     $timechange = file_get_contents("changed.txt");
-    if(time() - $timechange > 10 )
+    if(time() - $timechange > 2 )
         echo 0;
     else
         echo 1;
@@ -25,9 +25,8 @@ if($string == "currentparrot"){
 
 if($string == "all"){
     $parrots = array();
-    foreach (allFileNames() as &$filename) {
-        $parrot = array("parrot" => $filename, "base64" => getBase64($filename));
-        $parrots[] = $parrot;
+    foreach (allFilesInOrder() as &$filename) {
+        $parrots[] = str_replace("/users/neigenfind/www", "",$filename);
     }
     echo json_encode($parrots);
     return;

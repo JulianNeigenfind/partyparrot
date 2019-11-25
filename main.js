@@ -7,72 +7,70 @@
 })();
 
 function main() {
-    const intervalInMs = 5000;
+    const intervalInMs = 1000;
     const domain = 'http://neigenfind.bplaced.net/'/*'https://changepartyparrot.000webhostapp.com'*/;
     let mainSource = "";
     let currentWidth;
     let alarmpause;
     let mutesource;
     let alarmsource;
+    let timestart = Date.now();
 
-    createImg();
-    fetchNow("mute", false, function (object) {
-        mutesource = object.base64;
-    });
-    fetchNow("alarm", false, function (object) {
-        alarmsource = object.base64;
-    });
-    fetchcurrent();
+    //caching
+
+    loadEverything();
+    displayTextAfterTenSeconds();
+
+    //maintask
+
     fetchcurrentrecursivelywithcheck();
-    let banner = document.querySelector("a[title*='000webhost']");
-    if (banner != null) banner.parentNode.removeChild(banner);
-    setInterval(function () {
-        let img = document.getElementById("partyParrot");
-        if (img && img.src !== mainSource) {
-            img.src = mainSource;
-        }
-        let size = document.getElementById("size");
-        if (size !== document.activeElement)
-            size.value = currentWidth;
-    }, 1000);
-    loadAllParrots();
 
 
-    function createImg() {
-        let img = document.createElement("img");
-        img.id = "partyParrot";
-        img.onload = function () {
-            let imgloader = document.getElementById("imgloader");
-            if (imgloader != null) imgloader.parentNode.removeChild(imgloader);
-            img.onload = function () {
-            };
-        };
-        document.getElementById("content").prepend(img);
+    //functions
+
+    function loadEverything() {
+        Promise.all([
+            fetchNow("mute", function (object) {
+                mutesource = object.base64;
+            }),
+            fetchNow("alarm", function (object) {
+                alarmsource = object.base64;
+            }),
+        ]).then(fetchcurrent).then(createImg).then(loadAllParrots);
     }
 
-    function fetchNow(parrot, recursive, processResponse) {
+    function createImg() {
+        return new Promise((resolve, reject) => {
+            let img = document.createElement("img");
+            img.id = "partyParrot";
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = mainSource;
+            document.getElementById("content").prepend(img);
+        });
+    }
+
+    function displayTextAfterTenSeconds() {
+        setTimeout(function () {
+            let longcachingtext = document.getElementById("longcachingtext");
+            if (longcachingtext) longcachingtext.style.display = "";
+        }, 10000);
+    }
+
+    function fetchNow(parrot, processResponse) {
         const url = new URL(domain + '/getParrot.php');
         url.search = new URLSearchParams({"parrot": parrot}).toString();
 
-        fetch(url).then(function (response) {
-            response.text().then(function (text) {
+        return fetch(url).then(function (response) {
+            return response.text().then(function (text) {
                 let object = JSON.parse(text);
                 processResponse(object);
-                if (recursive)
-                    setTimeout(function () {
-                        fetchNow(parrot, true, processResponse);
-                    }, intervalInMs);
-            })
-        }).catch(function (ignored) {
-            if (recursive)
-                setTimeout(function () {
-                    fetchNow(parrot, true, processResponse);
-                }, intervalInMs);
+            });
         });
     }
 
     function fetchcurrent() {
-        fetchNow("currentParrot", false, function (object) {
+        return fetchNow("currentParrot", function (object) {
             mainSource = object.base64;
             currentWidth = parseInt(object.width);
             setAlarmpause(object.alarmpause === "true", false);
@@ -85,13 +83,23 @@ function main() {
         fetch(url).then(function (response) {
             response.text().then(function (changed) {
                 if (changed === '1') {
-                    fetchcurrent()
+                    fetchcurrent().then(changeValuesIfNecessary);
                 }
                 setTimeout(function () {
                     fetchcurrentrecursivelywithcheck();
                 }, intervalInMs);
             })
         });
+    }
+
+    function changeValuesIfNecessary() {
+        let img = document.getElementById("partyParrot");
+        if (img && img.src !== mainSource) {
+            img.src = mainSource;
+        }
+        let size = document.getElementById("size");
+        if (size !== document.activeElement)
+            size.value = currentWidth;
     }
 
     function setsource(parrot) {
@@ -102,9 +110,7 @@ function main() {
         fetch(url, {
             method: 'POST',
             body: data,
-        }).then(function (response) {
-            fetchcurrent();
-        });
+        }).then(fetchcurrent).then(changeValuesIfNecessary);
     }
 
     function resizeParrot(px, post) {
@@ -118,9 +124,7 @@ function main() {
             fetch(url, {
                 method: 'POST',
                 body: data,
-            }).then(function () {
-                fetchcurrent();
-            });
+            }).then(fetchcurrent).then(changeValuesIfNecessary);
         }
     }
 
@@ -143,22 +147,57 @@ function main() {
         document.getElementById("mutebuttonimg").src = alarmpause ? mutesource : alarmsource;
     }
 
+    function removeOverlay() {
+        remove(document.getElementById("cachingoverlay"));
+        document.getElementById("pagewrapper").style.overflow = "";
+        document.getElementById("pagewrapper").style.position = "";
+    }
+
     function loadAllParrots() {
-        fetchNow("all", false, object => {
-            for (let parrot of object) {
-                let img = document.createElement("img");
-                img.classList.add("thumbnail");
-                img.src = parrot.base64;
-                img.title = parrot.parrot;
-                img.addEventListener("click", event => {
-                    setsource(parrot.parrot);
-                });
-                document.getElementById("thumbnails").prepend(img);
+        fetchNow("all", all => {
+            var promises = [];
+            for (let path of all) {
+                const filename = path.substring(path.lastIndexOf('/') + 1).replace(/\.[^/.]+$/, "");
+                promises.push(
+                    new Promise((resolve, reject) => {
+                        let img = new Image();
+                        img.onload = resolve;
+                        img.onerror = reject;
+                        img.classList.add("thumbnail");
+                        img.title = filename;
+                        img.addEventListener("click", event => {
+                            setsource(filename);
+                        });
+                        document.getElementById("thumbnails").appendChild(img);
+                        img.src = path;
+                    })
+                );
             }
-            let loader = document.getElementById("thumbnailloader");
-            if (loader != null) loader.parentNode.removeChild(loader);
             onlyShowMatchingThumbnails(document.getElementById("parrot").value);
+            progressPromise(promises, update).then(() => {
+                removeOverlay();
+                console.log("Time to load: " + (Date.now() - timestart));
+            });
         });
+    }
+
+    function progressPromise(promises, tickCallback) {
+        let len = promises.length;
+        let progress = 0;
+
+        function tick(promise) {
+            promise.then(function () {
+                progress++;
+                tickCallback(progress, len);
+            });
+            return promise;
+        }
+
+        return Promise.all(promises.map(tick));
+    }
+
+    function update(completed, total) {
+        document.querySelector('progress').value = Math.round(completed / total * 100);
     }
 
     function resetThumbnails() {
@@ -224,4 +263,9 @@ function main() {
     document.getElementById("minusbutton").addEventListener("click", function decreaseSize() {
         resizeParrot(currentWidth - 20, true);
     });
+
+    function remove(element) {
+        if (element != null)
+            element.parentNode.removeChild(element);
+    }
 }

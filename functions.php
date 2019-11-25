@@ -22,13 +22,14 @@ function searchForFile($string)
 
 function randomFile()
 {
-    $files = allFiles();
+    $files = allFilesInOrder();
     return $files[array_rand($files)];
 }
 
-function allFiles()
+function allFilesOfFolder($folder)
 {
-    $Directory = new RecursiveDirectoryIterator(dirname(__FILE__) . DIRECTORY_SEPARATOR);
+    $path = dirname(__FILE__) . DIRECTORY_SEPARATOR . $folder . DIRECTORY_SEPARATOR;
+    $Directory = new RecursiveDirectoryIterator($path);
     $Iterator = new RecursiveIteratorIterator($Directory);
     $Regex = new RegexIterator($Iterator, '/^.+\.gif$/i', RecursiveRegexIterator::GET_MATCH);
     $files = array();
@@ -39,11 +40,22 @@ function allFiles()
     return $files;
 }
 
+function allFilesInOrder()
+{
+    $filesinorder = array_merge(
+        allFilesOfFolder("extras"),
+        allFilesOfFolder("parrots"),
+        allFilesOfFolder("guests"),
+        allFilesOfFolder("flags")
+    );
+    return $filesinorder;
+}
+
 function allFileNames()
 {
     $filenames = array();
 
-    foreach (allFiles() as $file) {
+    foreach (allFilesInOrder() as $file) {
         $path_parts = pathinfo($file);
         $filename = $path_parts['filename'];
         if (!in_array($filename, $filenames))
@@ -51,4 +63,5 @@ function allFileNames()
     }
     return $filenames;
 }
+
 

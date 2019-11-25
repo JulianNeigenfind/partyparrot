@@ -1,5 +1,5 @@
 javascript:(function () {
-    const intervalInMs = 5000;
+    const intervalInMs = 1000;
     const domain = 'http://neigenfind.bplaced.net/'/*'https://changepartyparrot.000webhostapp.com'*/;
     const parrotId = "partyParrotTest";
     const bannerId = "banner";
@@ -72,7 +72,7 @@ javascript:(function () {
                     fetchcurrent()
                 }
                 setTimeout(function () {
-                    fetchcurrentrecursivlywithcheck();
+                    fetchcurrentrecursivelywithcheck();
                 }, intervalInMs);
             })
         });
