@@ -17,17 +17,26 @@ function main() {
     let timestart = Date.now();
 
     loadEverything() //caching
-        .then(() => console.log("fetchcurrentrecursivelywithcheck")); //maintask
+        .then(fetchcurrentrecursivelywithcheck);//maintask
     displayTextAfterTenSeconds();
 
     //functions
 
+    function log(string) {
+        console.log(string)
+    }
+
     function loadEverything() {
-        return fetchalarmsource()
-            .then(fetchcurrent)
-            .then(createImg)
-            .then(loadAllParrots)
-            .catch(()=>console.log("promise error in loadEverything()"));
+        return new Promise(resolve =>
+            fetchalarmsource()
+                .then(fetchcurrent()
+                    .then(createImg()
+                        .then(loadAllParrots()
+                            .then(resolve)
+                        ).catch(reason => log(reason))
+                    )
+                )
+        );
     }
 
     function fetchalarmsource() {
@@ -47,6 +56,7 @@ function main() {
             img.id = "partyParrot";
             img.onload = resolve;
             img.onerror = reject;
+            log(mainSource);
             img.src = mainSource;
             document.getElementById("content").prepend(img);
         });
@@ -63,19 +73,35 @@ function main() {
         const url = new URL(domain + '/getParrot.php');
         url.search = new URLSearchParams({"parrot": parrot}).toString();
 
-        return fetch(url).then(response => {
-            response.text().then(text => {
-                let object = JSON.parse(text);
-                processResponse(object);
-            })
+        return new Promise(resolve => {
+            fetch(url).then(response => {
+                response.text().then(text => {
+                    let object = JSON.parse(text);
+                    processResponse(object, resolve);
+                })
+            });
         });
     }
 
+
     function fetchcurrent() {
-        return fetchNow("currentParrot", function (object) {
-            mainSource = object.base64;
-            currentWidth = parseInt(object.width);
-            setAlarmpause(object.alarmpause === "true", false);
+        const url = new URL(domain + '/getParrot.php');
+        url.search = new URLSearchParams({"parrot": parrot}).toString();
+
+        return new Promise(resolve => {
+            fetch(url).then(response => {
+                response.text().then(text => {
+                    firstFunction(resolve);
+                    function firstFunction(_callback){
+                        let object = JSON.parse(text);
+                        mainSource = object.base64;
+                        currentWidth = parseInt(object.width);
+                        setAlarmpause(object.alarmpause === "true", false);
+                        _callback();
+                    }
+
+                })
+            });
         });
     }
 
@@ -117,21 +143,23 @@ function main() {
 
     function setsource(parrot) {
         post('/changeParrot.php', "parrot", parrot)
-            .then(fetchcurrent)
-            .then(changeValuesIfNecessary);
+            .then(fetchcurrent()
+                .then(changeValuesIfNecessary)
+            );
     }
 
-    function resizeParrot(px, post) {
+    function resizeParrot(px, shouldpost) {
         currentWidth = px;
 
-        if (post) post('/changeParrot.php', "width", currentWidth)
-            .then(fetchcurrent)
-            .then(changeValuesIfNecessary);
+        if (shouldpost) post('/changeParrot.php', "width", currentWidth)
+            .then(fetchcurrent()
+                .then(changeValuesIfNecessary)
+            );
     }
 
-    function setAlarmpause(boolean, post) {
+    function setAlarmpause(boolean, shouldpost) {
         setMute(boolean);
-        if (post) post('/changeParrot.php', "alarmpause", boolean)
+        if (shouldpost) post('/changeParrot.php', "alarmpause", boolean)
     }
 
     function setMute(boolean) {
@@ -146,29 +174,32 @@ function main() {
     }
 
     function loadAllParrots() {
-        return fetchNow("all", all => {
-            var promises = [];
-            for (let path of all) {
-                const filename = path.substring(path.lastIndexOf('/') + 1).replace(/\.[^/.]+$/, "");
-                promises.push(
-                    new Promise((resolve, reject) => {
-                        let img = new Image();
-                        img.onload = resolve;
-                        img.onerror = reject;
-                        img.classList.add("thumbnail");
-                        img.title = filename;
-                        img.addEventListener("click", event => {
-                            setsource(filename);
-                        });
-                        document.getElementById("thumbnails").appendChild(img);
-                        img.src = path;
-                    })
-                );
-            }
-            onlyShowMatchingThumbnails(document.getElementById("parrot").value);
-            progressPromise(promises, update).then(() => {
-                removeOverlay();
-                console.log("Time to load: " + (Date.now() - timestart));
+        return new Promise(resolve => {
+            fetchNow("all", all => {
+                var promises = [];
+                for (let path of all) {
+                    const filename = path.substring(path.lastIndexOf('/') + 1).replace(/\.[^/.]+$/, "");
+                    promises.push(
+                        new Promise((resolve, reject) => {
+                            let img = new Image();
+                            img.onload = resolve;
+                            img.onerror = reject;
+                            img.classList.add("thumbnail");
+                            img.title = filename;
+                            img.addEventListener("click", event => {
+                                setsource(filename);
+                            });
+                            document.getElementById("thumbnails").appendChild(img);
+                            img.src = path;
+                        })
+                    );
+                }
+                onlyShowMatchingThumbnails(document.getElementById("parrot").value);
+                progressPromise(promises, update).then(() => {
+                    removeOverlay();
+                    console.log("Time to load: " + (Date.now() - timestart));
+                    resolve();
+                });
             });
         });
     }
