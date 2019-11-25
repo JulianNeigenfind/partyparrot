@@ -16,27 +16,29 @@ function main() {
     let alarmsource;
     let timestart = Date.now();
 
-    //caching
-
-    loadEverything();
+    loadEverything() //caching
+        .then(() => console.log("fetchcurrentrecursivelywithcheck")); //maintask
     displayTextAfterTenSeconds();
-
-    //maintask
-
-    fetchcurrentrecursivelywithcheck();
-
 
     //functions
 
     function loadEverything() {
-        Promise.all([
+        return fetchalarmsource()
+            .then(fetchcurrent)
+            .then(createImg)
+            .then(loadAllParrots)
+            .catch(()=>console.log("promise error in loadEverything()"));
+    }
+
+    function fetchalarmsource() {
+        return Promise.all([
             fetchNow("mute", function (object) {
                 mutesource = object.base64;
             }),
             fetchNow("alarm", function (object) {
                 alarmsource = object.base64;
             }),
-        ]).then(fetchcurrent).then(createImg).then(loadAllParrots);
+        ]);
     }
 
     function createImg() {
@@ -61,11 +63,11 @@ function main() {
         const url = new URL(domain + '/getParrot.php');
         url.search = new URLSearchParams({"parrot": parrot}).toString();
 
-        return fetch(url).then(function (response) {
-            return response.text().then(function (text) {
+        return fetch(url).then(response => {
+            response.text().then(text => {
                 let object = JSON.parse(text);
                 processResponse(object);
-            });
+            })
         });
     }
 
@@ -102,44 +104,34 @@ function main() {
             size.value = currentWidth;
     }
 
-    function setsource(parrot) {
+    function post(php, name, value) {
         const data = new URLSearchParams();
-        data.append("parrot", parrot);
-        const url = domain + '/changeParrot.php';
+        data.append(name, value);
+        const url = domain + php;
 
-        fetch(url, {
+        return fetch(url, {
             method: 'POST',
             body: data,
-        }).then(fetchcurrent).then(changeValuesIfNecessary);
+        });
+    }
+
+    function setsource(parrot) {
+        post('/changeParrot.php', "parrot", parrot)
+            .then(fetchcurrent)
+            .then(changeValuesIfNecessary);
     }
 
     function resizeParrot(px, post) {
         currentWidth = px;
 
-        if (post) {
-            const url = domain + '/changeParrot.php';
-            const data = new URLSearchParams();
-            data.append("width", currentWidth);
-
-            fetch(url, {
-                method: 'POST',
-                body: data,
-            }).then(fetchcurrent).then(changeValuesIfNecessary);
-        }
+        if (post) post('/changeParrot.php', "width", currentWidth)
+            .then(fetchcurrent)
+            .then(changeValuesIfNecessary);
     }
 
     function setAlarmpause(boolean, post) {
         setMute(boolean);
-        if (post) {
-            const url = domain + '/changeParrot.php';
-            const data = new URLSearchParams();
-            data.append("alarmpause", boolean);
-
-            fetch(url, {
-                method: 'POST',
-                body: data,
-            });
-        }
+        if (post) post('/changeParrot.php', "alarmpause", boolean)
     }
 
     function setMute(boolean) {
@@ -154,7 +146,7 @@ function main() {
     }
 
     function loadAllParrots() {
-        fetchNow("all", all => {
+        return fetchNow("all", all => {
             var promises = [];
             for (let path of all) {
                 const filename = path.substring(path.lastIndexOf('/') + 1).replace(/\.[^/.]+$/, "");

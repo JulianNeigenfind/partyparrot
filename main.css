@@ -1,3 +1,7 @@
+body{
+    background: white;
+}
+
 #pagewrapper{
     min-width: 185px;
     background-color: inherit;
