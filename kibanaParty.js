@@ -26,76 +26,86 @@ javascript:(function () {
         map = {};
     };
 
-    const fetchNow = function (parrot, recursive, processResponse) {
-        const url = new URL(domain + '/getParrot.php');
-        url.search = new URLSearchParams({"parrot": parrot}).toString();
-
-        fetch(url).then(function (response) {
-            response.text().then(function (text) {
-                let object = JSON.parse(text);
-                processResponse(object);
-                if (recursive)
-                    setTimeout(function () {
-                        fetchNow(parrot, true, processResponse);
-                    }, intervalInMs);
-            })
-        }).catch(function (err) {
-            if (recursive)
-                setTimeout(function () {
-                    fetchNow(parrot, true, processResponse);
-                }, intervalInMs);
-        });
-    };
-
-    function fetchcurrent() {
-        fetchNow("currentParrot", false, function (object) {
-            mainSource = object.base64;
-            currentWidth = object.width;
-            let img = document.getElementById(parrotId);
-            if (dontRefresh || !img) {
-                return;
-            }
-            if (img.src !== mainSource)
-                img.src = mainSource;
-            if (img.style.width !== currentWidth + "px")
-                resizeParrot(currentWidth, false);
-            setAlarmpause(object.alarmpause === "true", false);
-        });
-    }
-
-    function fetchcurrentrecursivelywithcheck() {
-        const url = new URL(domain + '/getParrot.php');
-        url.search = new URLSearchParams({"parrot": "changed"}).toString();
-        fetch(url).then(function (response) {
-            response.text().then(function (changed) {
-                if (changed === '1') {
-                    fetchcurrent()
-                }
-                setTimeout(function () {
-                    fetchcurrentrecursivelywithcheck();
-                }, intervalInMs);
-            })
-        });
-    }
-
     removeButton();
-    fetchNow("angryparrot", false, function (object) {
-        angrySource = object.base64;
-    });
-    fetchNow("mute", false, function (object) {
-        muteSource = object.base64;
-    });
-    fetchNow("thomas", false, function (object) {
-        resetSource = object.base64;
-    });
-    fetchcurrent();
-    fetchcurrentrecursivelywithcheck();
+    loadEverything()
+        .then(fetchcurrent)
+        .then(changeValuesIfNecessary)
+        .then(fetchcurrentrecursivelywithcheck);
     setInterval(function () {
         parrot();
         cutalarms();
         parrotalarms();
         resetParrotIfNecessary();
     }, 1000);
+
+    function loadEverything() {
+        return Promise.all([
+            fetchNow("angryparrot").then(object => {
+                angrySource = object.base64;
+            }),
+            fetchNow("mute").then(object => {
+                muteSource = object.base64;
+            }),
+            fetchNow("thomas").then(object => {
+                resetSource = object.base64;
+            }),
+        ]);
+    }
+
+    function fetchNow(parrot) {
+        const url = new URL(domain + '/getParrot.php');
+
+        url.search = new URLSearchParams({"parrot": parrot}).toString();
+        return new Promise((resolve, reject) => {
+            fetch(url).then(response => {
+                response.text().then(text => {
+                    let object = JSON.parse(text);
+                    resolve(object);
+                }).catch(() => reject("error occured while converting response int text"));
+            }).catch(() => reject("error occured while fetching " + parrot));
+        });
+
+    }
+
+    function fetchcurrent() {
+        return fetchNow("currentparrot").then(object => {
+            mainSource = object.base64;
+            currentWidth = parseInt(object.width);
+            alarmpause = object.alarmpause === "true";
+        });
+
+    }
+
+    function changeValuesIfNecessary() {
+        let img = document.getElementById(parrotId);
+        if (img && img.src !== mainSource) {
+            img.src = mainSource;
+        }
+        if (img && img.style.width !== currentWidth + "px") {
+            img.style.width = currentWidth + "px";
+        }
+        setAlarmpause(alarmpause, false);
+
+    }
+
+    function fetchcurrentrecursivelywithcheck() {
+        fetchNow("changed").then(changed => {
+            if (changed === 1) {
+                fetchcurrent().then(changeValuesIfNecessary);
+            }
+            repeat();
+        }).catch(reason => {
+            console.log(reason);
+            repeat();
+
+        });
+
+        function repeat() {
+            setTimeout(function () {
+                fetchcurrentrecursivelywithcheck();
+            }, intervalInMs);
+        }
+    }
 
 
     function removeButton() {
@@ -124,17 +134,8 @@ javascript:(function () {
         }
     }
 
-    function getTitle() {
-        return "Try the following functions:\n" +
-            "-*f* for fullscreen\n" + "-*r* for random parrot\n" +
-            "-*+* for bigger parrot\n" + "-*-* for smaller parrot\n" +
-            "-*Alt* to enter a parrot\n" + "-*Ctrl* to reset parrot\n" +
-            "-*m* to enter max stringlength for alarms\n";
-    }
-
     function createImg() {
         let div = document.createElement("div");
-        div.title = getTitle();
         div.style.position = "fixed";
         div.style.zIndex = "2147483646";
         div.style.left = "0px";
@@ -156,21 +157,24 @@ javascript:(function () {
         document.body.prepend(element);
     }
 
-    function resizeParrot(px, post) {
+    function post(php, name, value) {
+        const data = new URLSearchParams();
+        data.append(name, value);
+        const url = domain + php;
+
+        return fetch(url, {
+            method: 'POST',
+            body: data,
+        });
+    }
+
+    function resizeParrot(px, shouldpost) {
         let img = document.getElementById(parrotId);
         img.style.width = px + "px";
         currentWidth = px;
 
-        if (post) {
-            const url = domain + '/changeParrot.php';
-            const data = new URLSearchParams();
-            data.append("width", currentWidth);
-
-            fetch(url, {
-                method: 'POST',
-                body: data,
-            });
-        }
+        if (shouldpost)
+            post('/changeParrot.php', "width", currentWidth)
     }
 
     function resetAfter(seconds) {
@@ -313,39 +317,16 @@ javascript:(function () {
         return highs
     }
 
-    function setsource(string) {
-        const url = domain + '/changeParrot.php';
-        const data = new URLSearchParams();
-        data.append("parrot", string);
-
-        fetch(url, {
-            method: 'POST',
-            body: data,
-        }).then(function (response) {
-            response.text().then(function (text) {
-                currentParrot = text;
-            });
-            fetchNow("currentParrot", false,
-                function (object) {
-                    mainSource = object.base64;
-                }
-            );
-        });
+    function setsource(parrot) {
+        post('/changeParrot.php', "parrot", parrot);
     }
 
-    function setAlarmpause(boolean, post) {
+    function setAlarmpause(boolean, shouldpost) {
         alarmpause = boolean;
         alarmpause ? createMute() : deleteMute();
-        if (post) {
-            const url = domain + '/changeParrot.php';
-            const data = new URLSearchParams();
-            data.append("alarmpause", boolean);
+        if (shouldpost)
+            post('/changeParrot.php', "alarmpause", boolean)
 
-            fetch(url, {
-                method: 'POST',
-                body: data,
-            });
-        }
     }
 
     function keyfunctions() {
@@ -383,12 +364,14 @@ javascript:(function () {
     }
 
     function scrollPastFilters() {
-        document.getElementsByClassName("react-grid-layout dshLayout--viewing")[0].scrollIntoView();
+        let filters = document.getElementsByClassName("react-grid-layout dshLayout--viewing")[0];
+        if (filters)
+            filters.scrollIntoView();
     }
 
     function GoInFullscreen() {
         let fullscreenbutton = document.querySelector("[data-test-subj='dashboardFullScreenMode']");
-        if (fullscreenbutton != null) {
+        if (fullscreenbutton) {
             fullscreenbutton.click();
             removeButton();
         }

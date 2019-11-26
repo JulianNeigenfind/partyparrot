@@ -27,17 +27,20 @@ foreach (array_keys($parameters) as $parameter) {
 }
 
 if ($parameters["parrot"] == "random") {
-    $file = randomFile();
+    $file = randomFile(true);
+} else if ($parameters["parrot"] == "randomnoflags") {
+    $file = randomFile(false);
 } else {
     $file = searchForFile($parameters["parrot"]);
 }
 
 if (file_exists($file)) {
     $type = pathinfo($file, PATHINFO_EXTENSION);
+    $filename = pathinfo($file, PATHINFO_FILENAME);
     $data = file_get_contents($file);
     $base64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
 
-    $arr = array('parrot' => $parameters["parrot"], 'width' => $parameters["width"], 'alarmpause' => $parameters["alarmpause"], 'base64' => $base64);
+    $arr = array('parrot' => $filename, 'width' => $parameters["width"], 'alarmpause' => $parameters["alarmpause"], 'base64' => $base64);
     $json = json_encode($arr);
 
     if (file_put_contents("currentparrot.json", $json)){

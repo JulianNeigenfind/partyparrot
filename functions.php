@@ -9,20 +9,17 @@ function searchForFile($string)
     if (!file_exists($file)) $file = $path . DIRECTORY_SEPARATOR . "additionalmedia" . DIRECTORY_SEPARATOR . $string . ".gif";
     if (!file_exists($file)) $file = $path . DIRECTORY_SEPARATOR . "additionalmedia" . DIRECTORY_SEPARATOR . $string . ".png";
     if (!file_exists($file)) $file = $path . DIRECTORY_SEPARATOR . "additionalmedia" . DIRECTORY_SEPARATOR . $string . ".jpg";
-    if (!file_exists($file)) $file = $path . "parrots" . DIRECTORY_SEPARATOR . "hd" . DIRECTORY_SEPARATOR . $string . ".gif";
     if (!file_exists($file)) $file = $path . "parrots" . DIRECTORY_SEPARATOR . $string . ".gif";
-    if (!file_exists($file)) $file = $path . "flags" . DIRECTORY_SEPARATOR . "hd" . DIRECTORY_SEPARATOR . $string . ".gif";
     if (!file_exists($file)) $file = $path . "flags" . DIRECTORY_SEPARATOR . $string . ".gif";
-    if (!file_exists($file)) $file = $path . "guests" . DIRECTORY_SEPARATOR . "hd" . DIRECTORY_SEPARATOR . $string . ".gif";
     if (!file_exists($file)) $file = $path . "guests" . DIRECTORY_SEPARATOR . $string . ".gif";
     if (!file_exists($file)) $file = $path . "extras" . DIRECTORY_SEPARATOR . $string . ".gif";
-    if (!file_exists($file)) $file = $path . "parrots" . DIRECTORY_SEPARATOR . "hd" . DIRECTORY_SEPARATOR . "parrotnotfound.gif";
+    if (!file_exists($file)) $file = $path . "parrots" . DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR . "parrotnotfound.gif";
     return $file;
 }
 
-function randomFile()
+function randomFile($includingflags)
 {
-    $files = allFilesInOrder();
+    $files = allFilesInOrder($includingflags);
     return $files[array_rand($files)];
 }
 
@@ -40,14 +37,19 @@ function allFilesOfFolder($folder)
     return $files;
 }
 
-function allFilesInOrder()
+function allFilesInOrder($includingflags)
 {
     $filesinorder = array_merge(
         allFilesOfFolder("extras"),
         allFilesOfFolder("parrots"),
-        allFilesOfFolder("guests"),
-        allFilesOfFolder("flags")
+        allFilesOfFolder("guests")
     );
+    if ($includingflags) {
+        $filesinorder = array_merge(
+            $filesinorder,
+            allFilesOfFolder("flags")
+        );
+    }
     return $filesinorder;
 }
 
@@ -55,7 +57,7 @@ function allFileNames()
 {
     $filenames = array();
 
-    foreach (allFilesInOrder() as $file) {
+    foreach (allFilesInOrder(true) as $file) {
         $path_parts = pathinfo($file);
         $filename = $path_parts['filename'];
         if (!in_array($filename, $filenames))

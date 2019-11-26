@@ -25,7 +25,7 @@ if($string == "currentparrot"){
 
 if($string == "all"){
     $parrots = array();
-    foreach (allFilesInOrder() as &$filename) {
+    foreach (allFilesInOrder(true) as &$filename) {
         $parrots[] = str_replace("/users/neigenfind/www", "",$filename);
     }
     echo json_encode($parrots);

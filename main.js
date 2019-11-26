@@ -7,47 +7,46 @@
 })();
 
 function main() {
-    const intervalInMs = 1000;
-    const domain = 'http://neigenfind.bplaced.net/'/*'https://changepartyparrot.000webhostapp.com'*/;
-    let mainSource = "";
-    let currentWidth;
-    let alarmpause;
-    let mutesource;
-    let alarmsource;
-    let timestart = Date.now();
-
-    loadEverything() //caching
-        .then(fetchcurrentrecursivelywithcheck);//maintask
-    displayTextAfterTenSeconds();
-
-    //functions
-
-    function log(string) {
-        console.log(string)
+    function E(id) {
+        return document.getElementById(id);
     }
 
+    const intervalInMs = 1000, domain = 'http://neigenfind.bplaced.net/';
+    let mainSource, currentWidth, alarmpause, mutesource, alarmsource, timestart = Date.now();
+    /** @namespace object.base64     **/
+    /** @namespace object.alarmpause **/
+
+    loadEverything() /*caching*/
+        .then(startMainLoop)/*maintask*/
+        .then(removeLoadingScreen);
+    displayTextAfterTenSeconds();
+
+    /*functions*/
+
     function loadEverything() {
-        return new Promise(resolve =>
-            fetchalarmsource()
-                .then(fetchcurrent()
-                    .then(createImg()
-                        .then(loadAllParrots()
-                            .then(resolve)
-                        ).catch(reason => log(reason))
-                    )
-                )
-        );
+        return Promise.all([
+            fetchalarmsource().then(fetchcurrent).then(changeValuesIfNecessary).then(createImg),
+            loadAllParrots(),
+        ]);
     }
 
     function fetchalarmsource() {
         return Promise.all([
-            fetchNow("mute", function (object) {
-                mutesource = object.base64;
+            fetchNow("mute").then(object => {
+                mutesource = object.base64
             }),
-            fetchNow("alarm", function (object) {
-                alarmsource = object.base64;
+            fetchNow("alarm").then(object => {
+                alarmsource = object.base64
             }),
         ]);
+    }
+
+    function fetchcurrent() {
+        return fetchNow("currentparrot").then(object => {
+            mainSource = object.base64;
+            currentWidth = parseInt(object.width);
+            alarmpause = object.alarmpause === "true";
+        });
     }
 
     function createImg() {
@@ -56,78 +55,61 @@ function main() {
             img.id = "partyParrot";
             img.onload = resolve;
             img.onerror = reject;
-            log(mainSource);
             img.src = mainSource;
-            document.getElementById("content").prepend(img);
+            E("content").prepend(img);
         });
     }
 
     function displayTextAfterTenSeconds() {
         setTimeout(function () {
-            let longcachingtext = document.getElementById("longcachingtext");
+            let longcachingtext = E("longcachingtext");
             if (longcachingtext) longcachingtext.style.display = "";
         }, 10000);
     }
 
-    function fetchNow(parrot, processResponse) {
+
+    function fetchNow(parrot) {
         const url = new URL(domain + '/getParrot.php');
         url.search = new URLSearchParams({"parrot": parrot}).toString();
 
-        return new Promise(resolve => {
-            fetch(url).then(response => {
+        return new Promise((resolve, reject) => {
+            fetch(url.toString()).then(response => {
                 response.text().then(text => {
                     let object = JSON.parse(text);
-                    processResponse(object, resolve);
-                })
-            });
+                    resolve(object);
+                }).catch(() => reject("error occured while converting response int text"));
+            }).catch(() => reject("error occured while fetching " + parrot));
         });
     }
 
-
-    function fetchcurrent() {
-        const url = new URL(domain + '/getParrot.php');
-        url.search = new URLSearchParams({"parrot": parrot}).toString();
-
-        return new Promise(resolve => {
-            fetch(url).then(response => {
-                response.text().then(text => {
-                    firstFunction(resolve);
-                    function firstFunction(_callback){
-                        let object = JSON.parse(text);
-                        mainSource = object.base64;
-                        currentWidth = parseInt(object.width);
-                        setAlarmpause(object.alarmpause === "true", false);
-                        _callback();
-                    }
-
-                })
-            });
+    function startMainLoop() {
+        fetchNow("changed").then(changed => {
+            if (changed === 1) {
+                fetchcurrent()
+                    .then(changeValuesIfNecessary);
+            }
+            repeat();
+        }).catch(reason => {
+            console.log(reason);
+            repeat();
         });
-    }
 
-    function fetchcurrentrecursivelywithcheck() {
-        const url = new URL(domain + '/getParrot.php');
-        url.search = new URLSearchParams({"parrot": "changed"}).toString();
-        fetch(url).then(function (response) {
-            response.text().then(function (changed) {
-                if (changed === '1') {
-                    fetchcurrent().then(changeValuesIfNecessary);
-                }
-                setTimeout(function () {
-                    fetchcurrentrecursivelywithcheck();
-                }, intervalInMs);
-            })
-        });
+        function repeat() {
+            setTimeout(function () {
+                startMainLoop();
+            }, intervalInMs);
+        }
     }
 
     function changeValuesIfNecessary() {
-        let img = document.getElementById("partyParrot");
+        let img = E("partyParrot");
         if (img && img.src !== mainSource) {
             img.src = mainSource;
         }
-        let size = document.getElementById("size");
+        let size = E("size");
         if (size !== document.activeElement)
             size.value = currentWidth;
+        setAlarmpause(alarmpause, false);
     }
 
     function post(php, name, value) {
@@ -135,48 +117,40 @@ function main() {
         data.append(name, value);
         const url = domain + php;
 
-        return fetch(url, {
-            method: 'POST',
-            body: data,
-        });
+        return fetch(url, {method: 'POST', body: data,});
     }
 
     function setsource(parrot) {
-        post('/changeParrot.php', "parrot", parrot)
-            .then(fetchcurrent()
-                .then(changeValuesIfNecessary)
-            );
+        post('/changeParrot.php', "parrot", parrot).then();
     }
 
     function resizeParrot(px, shouldpost) {
         currentWidth = px;
-
-        if (shouldpost) post('/changeParrot.php', "width", currentWidth)
-            .then(fetchcurrent()
-                .then(changeValuesIfNecessary)
-            );
+        if (shouldpost)
+            post('/changeParrot.php', "width", currentWidth).then();
     }
 
     function setAlarmpause(boolean, shouldpost) {
         setMute(boolean);
-        if (shouldpost) post('/changeParrot.php', "alarmpause", boolean)
+        if (shouldpost)
+            post('/changeParrot.php', "alarmpause", boolean).then();
     }
 
     function setMute(boolean) {
         alarmpause = boolean;
-        document.getElementById("mutebuttonimg").src = alarmpause ? mutesource : alarmsource;
+        E("mutebuttonimg").src = alarmpause ? mutesource : alarmsource;
     }
 
-    function removeOverlay() {
-        remove(document.getElementById("cachingoverlay"));
-        document.getElementById("pagewrapper").style.overflow = "";
-        document.getElementById("pagewrapper").style.position = "";
+    function removeLoadingScreen() {
+        remove(E("cachingoverlay"));
+        E("pagewrapper").style.overflow = "";
+        E("pagewrapper").style.position = "";
     }
 
     function loadAllParrots() {
         return new Promise(resolve => {
-            fetchNow("all", all => {
-                var promises = [];
+            fetchNow("all").then(all => {
+                let promises = [];
                 for (let path of all) {
                     const filename = path.substring(path.lastIndexOf('/') + 1).replace(/\.[^/.]+$/, "");
                     promises.push(
@@ -186,17 +160,14 @@ function main() {
                             img.onerror = reject;
                             img.classList.add("thumbnail");
                             img.title = filename;
-                            img.addEventListener("click", event => {
-                                setsource(filename);
-                            });
-                            document.getElementById("thumbnails").appendChild(img);
+                            img.onclick = () => setsource(filename);
+                            E("thumbnails").appendChild(img);
                             img.src = path;
                         })
                     );
                 }
-                onlyShowMatchingThumbnails(document.getElementById("parrot").value);
+                onlyShowMatchingThumbnails(E("parrot").value);
                 progressPromise(promises, update).then(() => {
-                    removeOverlay();
                     console.log("Time to load: " + (Date.now() - timestart));
                     resolve();
                 });
@@ -224,17 +195,17 @@ function main() {
     }
 
     function resetThumbnails() {
-        let children = document.getElementById("thumbnails").children;
+        let children = E("thumbnails").children;
         for (let child of children) {
             child.style.display = "";
         }
     }
 
-    document.getElementById("form").addEventListener("submit", event => {
+    E("form").addEventListener("submit", event => {
         event.preventDefault();
         let string;
-        let input = document.getElementById("parrot");
-        let shownElements = document.getElementById("thumbnails").querySelectorAll('img:not([style*="display:none"]):not([style*="display: none"])');
+        let input = E("parrot");
+        let shownElements = E("thumbnails").querySelectorAll('img:not([style*="display:none"]):not([style*="display: none"])');
         if (shownElements.length === 1) {
             string = shownElements[0].title;
         } else {
@@ -246,7 +217,7 @@ function main() {
         return false;
     });
 
-    document.getElementById("size").addEventListener("keydown", event => {
+    E("size").addEventListener("keydown", event => {
         if (event.keyCode === 13) {
             let int = parseInt(event.target.value);
             if (isNaN(int) || int < 0 || int > 999)
@@ -257,7 +228,7 @@ function main() {
     });
 
     function onlyShowMatchingThumbnails(searchstring) {
-        let children = document.getElementById("thumbnails").children;
+        let children = E("thumbnails").children;
         for (let child of children) {
             if (child.title.toLowerCase().trim().indexOf(searchstring) > -1) {
                 child.style.display = "";
@@ -267,25 +238,14 @@ function main() {
         }
     }
 
-    document.getElementById("parrot").addEventListener("input", event => {
-        onlyShowMatchingThumbnails(event.target.value.toLowerCase().trim());
-    });
-
-    document.getElementById("randombutton").addEventListener("click", event => {
+    E("parrot").oninput = event => onlyShowMatchingThumbnails(event.target.value.toLowerCase().trim());
+    E("randombutton").onclick = event => {
         event.preventDefault();
         setsource("random");
-    });
-
-    document.getElementById("mutebutton").addEventListener("click", event => {
-        setAlarmpause(!alarmpause, true);
-    });
-
-    document.getElementById("plusbutton").addEventListener("click", function increaseSize() {
-        resizeParrot(currentWidth + 20, true);
-    });
-    document.getElementById("minusbutton").addEventListener("click", function decreaseSize() {
-        resizeParrot(currentWidth - 20, true);
-    });
+    };
+    E("mutebutton").onclick = () => setAlarmpause(!alarmpause, true);
+    E("plusbutton").onclick = () => resizeParrot(currentWidth + 20, true);
+    E("minusbutton").onclick = () => resizeParrot(currentWidth - 20, true);
 
     function remove(element) {
         if (element != null)
