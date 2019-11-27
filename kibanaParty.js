@@ -38,7 +38,7 @@ javascript:(function () {
     setInterval(function () {
         parrot();
         cutalarms();
-        orderLegend();
+        /*orderLegend();*/
         parrotalarms();
         resetParrotIfNecessary();
     }, 1000);
