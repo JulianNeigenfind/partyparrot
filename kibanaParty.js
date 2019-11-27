@@ -3,17 +3,15 @@ javascript:(function () {
     const domain = 'http://neigenfind.bplaced.net/';
     const parrotId = "partyParrotTest";
     const bannerId = "banner";
-    const defaultparrot = "60fpsparrot";
     let alarmpause = false;
-    let currentParrot = defaultparrot;
     let dontRefresh = false;
     let mainSource = "", angrySource, resetSource, muteSource;
     let defaultwidth = 101, currentWidth = defaultwidth;
     let maxStringLength = 44;
-    let lastResponse, lastHighId;
+    let lastResponse, lastHighTimestamp;
     getHighsAsArray().then(response => {
         lastResponse = response;
-        lastHighId = response[0]._id;
+        lastHighTimestamp = response.length > 0 ? response[0].sort[0] : null;
     });
     let timeStampRemove = null;
     let containers = [...document.getElementsByClassName("react-grid-item react-draggable react-resizable")].filter(function (element, index) {
@@ -22,6 +20,8 @@ javascript:(function () {
     for (let container of containers) {
         container.style.visibility = "hidden";
     }
+    /*let legendContainer = document.getElementsByClassName("react-grid-item react-draggable react-resizable")[1];
+    legendContainer.style.visibility = "hidden";*/
     let map = {};
     window.onkeydown = window.onkeyup = function (e) {
         e = e || event;
@@ -38,6 +38,7 @@ javascript:(function () {
     setInterval(function () {
         parrot();
         cutalarms();
+        orderLegend();
         parrotalarms();
         resetParrotIfNecessary();
     }, 1000);
@@ -81,6 +82,7 @@ javascript:(function () {
     }
 
     function changeValuesIfNecessary() {
+        if (dontRefresh) return;
         let img = document.getElementById(parrotId);
         if (img && img.src !== mainSource) {
             img.src = mainSource;
@@ -129,7 +131,6 @@ javascript:(function () {
             let banner = document.getElementById(bannerId);
             for (let i = 0; i <= 24; i++) {
                 if (d.getHours() === i && d.getMinutes() === 0 && d.getSeconds() === 0 && !banner) {
-                    dontRefresh = true;
                     resizeParrot(313, false);
                     createBanner("Es ist " + i + " Uhr!", "orange", 562);
                     resetAfter(30);
@@ -195,6 +196,13 @@ javascript:(function () {
             }
             timeStampRemove = null;
             dontRefresh = false;
+        } else {
+            if (dontRefresh)
+                return;
+            if (img.src !== mainSource)
+                img.src = mainSource;
+            if (img.style.width !== currentWidth + "px")
+                resizeParrot(currentWidth, false);
         }
     }
 
@@ -242,35 +250,39 @@ javascript:(function () {
     }
 
     function parrotalarms() {
-        if (alarmpause)
-            return;
         getHighsAsArray().then(response => {
             if (JSON.stringify(lastResponse) !== JSON.stringify(response)) {
-                let lastHighIndex = response.map(el => el._id).lastIndexOf(lastHighId);
-                alert(lastHighIndex);
-                let newHighs = lastHighIndex > 0 ? response.slice(0,lastHighIndex) : [];
-                if (newHighs.length){
-                    angryParrot(newHighs);
-                    lastHighId = newHighs[0]._id;
+                if (response.length <= 0) {
+                    lastHighTimestamp = null;
+                } else {
+                    let lastHighIndex = lastHighTimestamp !== null ?
+                        response.map(el => el.sort[0]).indexOf(lastHighTimestamp) : response.length;
+                    lastHighIndex = lastHighIndex !== -1 ? lastHighIndex : response.length;
+                    let newHighs = lastHighIndex > 0 ? response.slice(0, lastHighIndex) : [];
+                    if (newHighs.length) {
+                        if (!alarmpause)
+                            angryParrot(newHighs.map(el => el._source["mrs.eventlog.AlarmName"]));
+                        lastHighTimestamp = newHighs[0].sort[0];
+                    }
                 }
                 lastResponse = response;
             }
         });
 
-        function angryParrot(newHighs) {
+        function angryParrot(newHighsNames) {
             let img = document.getElementById(parrotId);
             let banner = document.getElementById(bannerId);
             img.src = angrySource;
             dontRefresh = true;
             if (!banner) {
-                createBanner("Neuer High Alarm!\n", "red", 698);
+                createBanner("Neuer High Alarm!", "red", 698, newHighsNames);
             }
             resizeParrot(313, false);
             resetAfter(15);
         }
     }
 
-    function createBanner(string, color, bubblewidth) {
+    function createBanner(string, color, bubblewidth, extrastringarray = null) {
         let div = document.createElement("div");
         div.id = bannerId;
         div.style.zIndex = "6001";
@@ -292,7 +304,29 @@ javascript:(function () {
         text.style.left = "289px";
         div.appendChild(bubble);
         div.appendChild(text);
+        if (extrastringarray !== null) {
+            let extradiv = document.createElement("div");
+            extradiv.id = "extradiv";
+            extradiv.style.backgroundColor = "white";
+            extradiv.style.position = "fixed";
+            extradiv.style.border = "2px solid black";
+            extradiv.style.borderRadius = "5px";
+            extradiv.style.padding = "5px";
+            extradiv.style.bottom = "450px";
+            extrastringarray.forEach((extrastring, index) => {
+                let extratext = document.createElement("p");
+                extratext.innerText = extrastring;
+                extratext.style.fontSize = "20px";
+                extratext.style.color = "black";
+                extradiv.appendChild(extratext);
+            });
+            div.appendChild(extradiv);
+        }
         appendToScreen(div);
+        if (extrastringarray !== null) {
+            let extradiv = document.getElementById("extradiv");
+            extradiv.style.left = (186 + bubblewidth / 2 - extradiv.offsetWidth / 2) + "px";
+        }
     }
 
     function createMute() {
@@ -317,7 +351,7 @@ javascript:(function () {
     }
 
     function getHighsAsArray() {
-        /*let url = new URL("http://kibana:5601/s/black/elasticsearch/_msearch");
+        let url = new URL("http://kibana:5601/s/black/elasticsearch/_msearch");
         let rawbody = '{"index":"mrs-eventlog-*"}\n{"version":true,"size":500,"sort":[{"@timestamp":{"order":"desc","unmapped_type":"boolean"}}],"_source":["mrs.eventlog.AlarmName"],"query":{"bool":{"must":[{"match_all":{}},{"match_all":{}}],"filter":[{"match_phrase":{"mrs.eventlog.Source":{"query":"iMosWeb"}}},{"match_phrase":{"mrs.eventlog.AlarmLevel":{"query":"High"}}},{"range":{"@timestamp":{"gte":"now-11h","lte":"now+1h"}}}],"should":[],"must_not":[{"bool":{"minimum_should_match":1,"should":[{"match_phrase":{"mrs.eventlog.SystemName":"REF"}},{"match_phrase":{"mrs.eventlog.SystemName":"DEV"}}]}},{"match_phrase":{"mrs.eventlog.AlarmLevel":{"query":"Info"}}},{"match_phrase":{"mrs.eventlog.confirmed":{"query":"1"}}}]}}}\n';
         let headers = {
             "content-type": "application/x-ndjson",
@@ -327,11 +361,11 @@ javascript:(function () {
             method: 'POST',
             body: rawbody,
             headers: headers
-        })*/
-        const url = new URL(domain + '/getParrot.php');
+        })
+        /*const url = new URL(domain + '/getParrot.php');
         url.search = new URLSearchParams({"parrot": "test"}).toString();
 
-        return fetch(url).then(response => {
+        return fetch(url)*/.then(response => {
             return response.json();
         }).then(data => {
             return data.responses[0].hits.hits;
@@ -453,5 +487,22 @@ javascript:(function () {
             overlay.style.display = "none";
         }
     }
+
+   /* function orderLegend() {
+        if (legend != null) {
+            legend.prepend(legend.querySelector('[data-label="Middle"]'));
+            legend.prepend(legend.querySelector('[data-label="Low"]'));
+        } else {
+            setTimeout(orderLegend, 100);
+        }
+        cloneLegend();
+    }
+
+    function cloneLegend() {
+        let clone = legendContainer.cloneNode(true);
+        clone.style.visibility = "visible";
+        legendContainer.parentNode.prepend(clone);
+    }*/
+
 })
 ();
