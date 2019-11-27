@@ -22,7 +22,6 @@ foreach (array_keys($parameters) as $parameter) {
         $parameters[$parameter] = json_decode($data, true)[$parameter];
     } else {
         $parameters[$parameter] = trim(strtolower($_POST[$parameter]));
-        echo $parameters[$parameter];
     }
 }
 
@@ -45,7 +44,7 @@ if (file_exists($file)) {
 
     if (file_put_contents("currentparrot.json", $json)){
         file_put_contents("changed.txt", time());
-        echo "Erfolgreich geändert";
+        echo "Erfolgreich geändert => ".$filename;
     }
     else
         echo "Ups! Da ist was schiefgelaufen";

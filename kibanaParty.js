@@ -1,6 +1,6 @@
 javascript:(function () {
     const intervalInMs = 1000;
-    const domain = 'http://neigenfind.bplaced.net/'/*'https://changepartyparrot.000webhostapp.com'*/;
+    const domain = 'http://neigenfind.bplaced.net/';
     const parrotId = "partyParrotTest";
     const bannerId = "banner";
     const defaultparrot = "60fpsparrot";
@@ -10,7 +10,11 @@ javascript:(function () {
     let mainSource = "", angrySource, resetSource, muteSource;
     let defaultwidth = 101, currentWidth = defaultwidth;
     let maxStringLength = 44;
-    let highs = gethighs();
+    let lastResponse, lastHighId;
+    getHighsAsArray().then(response => {
+        lastResponse = response;
+        lastHighId = response[0]._id;
+    });
     let timeStampRemove = null;
     let containers = [...document.getElementsByClassName("react-grid-item react-draggable react-resizable")].filter(function (element, index) {
         return index === 2 || index === 3 || index === 4;
@@ -61,7 +65,7 @@ javascript:(function () {
                 response.text().then(text => {
                     let object = JSON.parse(text);
                     resolve(object);
-                }).catch(() => reject("error occured while converting response int text"));
+                }).catch(() => reject("error occured while converting response into text"));
             }).catch(() => reject("error occured while fetching " + parrot));
         });
 
@@ -238,18 +242,28 @@ javascript:(function () {
     }
 
     function parrotalarms() {
-        if (highs < gethighs() && !alarmpause) {
-            angryParrot();
-        }
-        highs = gethighs();
+        if (alarmpause)
+            return;
+        getHighsAsArray().then(response => {
+            if (JSON.stringify(lastResponse) !== JSON.stringify(response)) {
+                let lastHighIndex = response.map(el => el._id).lastIndexOf(lastHighId);
+                alert(lastHighIndex);
+                let newHighs = lastHighIndex > 0 ? response.slice(0,lastHighIndex) : [];
+                if (newHighs.length){
+                    angryParrot(newHighs);
+                    lastHighId = newHighs[0]._id;
+                }
+                lastResponse = response;
+            }
+        });
 
-        function angryParrot() {
+        function angryParrot(newHighs) {
             let img = document.getElementById(parrotId);
             let banner = document.getElementById(bannerId);
             img.src = angrySource;
             dontRefresh = true;
             if (!banner) {
-                createBanner("Neuer High Alarm!", "red", 698);
+                createBanner("Neuer High Alarm!\n", "red", 698);
             }
             resizeParrot(313, false);
             resetAfter(15);
@@ -302,19 +316,26 @@ javascript:(function () {
         }
     }
 
-    function gethighs() {
-        let highs = "";
-        let panel = document.querySelector("[data-test-subj='embeddablePanelHeading-[MRS]AlarmejeLeveliMosWeb']");
-        if (panel == null) return;
-        let divs = panel.parentNode.querySelectorAll("div");
-        for (let i = 0; i < divs.length; i++) {
-            let elem = divs[i];
-            if (elem.innerHTML.indexOf("High - Count") !== -1) {
-                let spans = elem.parentNode.querySelectorAll("span");
-                highs = spans[spans.length - 1].innerHTML;
-            }
-        }
-        return highs
+    function getHighsAsArray() {
+        /*let url = new URL("http://kibana:5601/s/black/elasticsearch/_msearch");
+        let rawbody = '{"index":"mrs-eventlog-*"}\n{"version":true,"size":500,"sort":[{"@timestamp":{"order":"desc","unmapped_type":"boolean"}}],"_source":["mrs.eventlog.AlarmName"],"query":{"bool":{"must":[{"match_all":{}},{"match_all":{}}],"filter":[{"match_phrase":{"mrs.eventlog.Source":{"query":"iMosWeb"}}},{"match_phrase":{"mrs.eventlog.AlarmLevel":{"query":"High"}}},{"range":{"@timestamp":{"gte":"now-11h","lte":"now+1h"}}}],"should":[],"must_not":[{"bool":{"minimum_should_match":1,"should":[{"match_phrase":{"mrs.eventlog.SystemName":"REF"}},{"match_phrase":{"mrs.eventlog.SystemName":"DEV"}}]}},{"match_phrase":{"mrs.eventlog.AlarmLevel":{"query":"Info"}}},{"match_phrase":{"mrs.eventlog.confirmed":{"query":"1"}}}]}}}\n';
+        let headers = {
+            "content-type": "application/x-ndjson",
+            "kbn-xsrf": "set"
+        };
+        return fetch(url, {
+            method: 'POST',
+            body: rawbody,
+            headers: headers
+        })*/
+        const url = new URL(domain + '/getParrot.php');
+        url.search = new URLSearchParams({"parrot": "test"}).toString();
+
+        return fetch(url).then(response => {
+            return response.json();
+        }).then(data => {
+            return data.responses[0].hits.hits;
+        });
     }
 
     function setsource(parrot) {

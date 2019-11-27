@@ -9,6 +9,11 @@ if (!isset($_GET["parrot"])) {
 }
 $string = trim(strtolower($_GET["parrot"]));
 
+if($string == "test") {
+    echo json_encode(json_decode(file_get_contents("test.json"),true), true);
+    return;
+}
+
 if($string == "changed"){
     $timechange = file_get_contents("changed.txt");
     if(time() - $timechange > 2 )
