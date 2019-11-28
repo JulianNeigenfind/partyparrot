@@ -4,6 +4,7 @@ javascript:(function () {
     const parrotId = "partyParrotTest";
     const bannerId = "banner";
     const extraDivId = "extradiv";
+    const muteId = "mute";
     let alarmpause = false;
     let dontRefresh = false;
     let mainSource = "", angrySource, resetSource, muteSource, bubbleSource;
@@ -85,6 +86,7 @@ javascript:(function () {
     }
 
     function changeValuesIfNecessary() {
+        setAlarmpause(alarmpause, false);
         if (dontRefresh) return;
         let img = document.getElementById(parrotId);
         if (img && img.src !== mainSource) {
@@ -93,8 +95,6 @@ javascript:(function () {
         if (img && img.style.width !== currentWidth + "px") {
             img.style.width = currentWidth + "px";
         }
-        setAlarmpause(alarmpause, false);
-
     }
 
     function fetchcurrentrecursivelywithcheck() {
@@ -250,8 +250,15 @@ javascript:(function () {
                 return;
             let newHighs = response.getAllHighsAfterTimestamp(lastResponse.lastTimestamp);
             if (newHighs.length) {
-                if (!alarmpause)
-                    angryParrot(newHighs.alarmnames);
+                if (!alarmpause) {
+                    angryParrot(newHighs.getAlarmnames());
+                } else {
+                    let mute = document.getElementById(muteId);
+                    mute.style.filter = "brightness(0.5) sepia(1) saturate(1000%)";
+                    setTimeout(function () {
+                        mute.style.filter = "";
+                    }, 1000);
+                }
                 lastHighTimestamp = response.lastTimestamp;
             }
             lastResponse = response;
@@ -321,9 +328,9 @@ javascript:(function () {
     }
 
     function createMute() {
-        if (!document.getElementById("mute")) {
+        if (!document.getElementById(muteId)) {
             let mute = document.createElement("img");
-            mute.id = "mute";
+            mute.id = muteId;
             mute.src = muteSource;
             mute.style.position = "fixed";
             mute.style.zIndex = "6001";
@@ -335,40 +342,45 @@ javascript:(function () {
     }
 
     function deleteMute() {
-        if (document.getElementById("mute")) {
-            let mute = document.getElementById("mute");
+        let mute = document.getElementById(muteId);
+        if (mute) {
             mute.remove();
         }
     }
 
     function getHighsAsObject() {
-        /*let url = new URL("http://kibana:5601/s/black/elasticsearch/_msearch");
-        let rawbody = '{"index":"mrs-eventlog-*"}\n{"version":true,"size":500,"sort":[{"@timestamp":{"order":"desc","unmapped_type":"boolean"}}],"_source":["mrs.eventlog.AlarmName"],"query":{"bool":{"must":[{"match_all":{}},{"match_all":{}}],"filter":[{"match_phrase":{"mrs.eventlog.Source":{"query":"iMosWeb"}}},{"match_phrase":{"mrs.eventlog.AlarmLevel":{"query":"High"}}},{"range":{"@timestamp":{"gte":"now-11h","lte":"now+1h"}}}],"should":[],"must_not":[{"bool":{"minimum_should_match":1,"should":[{"match_phrase":{"mrs.eventlog.SystemName":"REF"}},{"match_phrase":{"mrs.eventlog.SystemName":"DEV"}}]}},{"match_phrase":{"mrs.eventlog.AlarmLevel":{"query":"Info"}}},{"match_phrase":{"mrs.eventlog.confirmed":{"query":"1"}}}]}}}\n';
-        let headers = {
-            "content-type": "application/x-ndjson",
-            "kbn-xsrf": "set"
-        };
-        return fetch(url, {
-            method: 'POST',
-            body: rawbody,
-            headers: headers
-        })*/
-        const url = new URL(domain + '/getParrot.php');
-        url.search = new URLSearchParams({"parrot": "test"}).toString();
-
-        return fetch(url).then(response => {
+        return fetchAlarms(true).then(response => {
             return response.json();
         }).then(data => {
             return new ElasticSearchResponse(data);
         });
     }
 
+    function fetchAlarms(test) {
+        if (!test) {
+            let url = new URL("http://kibana:5601/s/black/elasticsearch/_msearch");
+            let rawbody = '{"index":"mrs-eventlog-*"}\n{"version":true,"size":500,"sort":[{"@timestamp":{"order":"desc","unmapped_type":"boolean"}}],"_source":["mrs.eventlog.AlarmName"],"query":{"bool":{"must":[{"match_all":{}},{"match_all":{}}],"filter":[{"match_phrase":{"mrs.eventlog.Source":{"query":"iMosWeb"}}},{"match_phrase":{"mrs.eventlog.AlarmLevel":{"query":"High"}}},{"range":{"@timestamp":{"gte":"now-11h","lte":"now+1h"}}}],"should":[],"must_not":[{"bool":{"minimum_should_match":1,"should":[{"match_phrase":{"mrs.eventlog.SystemName":"REF"}},{"match_phrase":{"mrs.eventlog.SystemName":"DEV"}}]}},{"match_phrase":{"mrs.eventlog.AlarmLevel":{"query":"Info"}}},{"match_phrase":{"mrs.eventlog.confirmed":{"query":"1"}}}]}}}\n';
+            let headers = {
+                "content-type": "application/x-ndjson",
+                "kbn-xsrf": "set"
+            };
+            return fetch(url.toString(), {
+                method: 'POST',
+                body: rawbody,
+                headers: headers
+            })
+        } else {
+            const url = new URL(domain + '/getParrot.php');
+            url.search = new URLSearchParams({"parrot": "test"}).toString();
+            return fetch(url.toString());
+        }
+    }
+
     function ElasticSearchResponse(data) {
-        this.array = data.responses[0].hits.hits.map(el => new ELRElement(el));
+        this.array = ResponseArray.from(data.responses[0].hits.hits.map(el => new ELRElement(el)));
         this.isEmpty = this.array.length <= 0;
         this.timestamps = this.array.map(el => el.timestamp);
         this.lastTimestamp = this.isEmpty ? null : this.timestamps[0];
-        this.array.alarmnames = this.array.map(el => el.alarmname);
 
         this.equals = function (response) {
             return JSON.stringify(this.array) === JSON.stringify(response.array);
@@ -384,8 +396,7 @@ javascript:(function () {
                 lastHighIndex = this.array.length;
 
             let highs = lastHighIndex > 0 ? this.array.slice(0, lastHighIndex) : [];
-            highs.alarmnames = highs.map(el => el.alarmname);
-            return highs;
+            return ResponseArray.from(highs);
         };
     }
 
@@ -394,16 +405,26 @@ javascript:(function () {
         this.alarmname = el._source["mrs.eventlog.AlarmName"];
     }
 
+    class ResponseArray extends Array {
+        getAlarmnames () {
+            return this.map(el => el.alarmname);
+        }
+    }
+
     function setsource(parrot) {
         post('/changeParrot.php', "parrot", parrot);
     }
 
     function setAlarmpause(boolean, shouldpost) {
         alarmpause = boolean;
-        alarmpause ? createMute() : deleteMute();
+        if (alarmpause) {
+            createMute();
+            resetAfter(0);
+        } else {
+            deleteMute();
+        }
         if (shouldpost)
             post('/changeParrot.php', "alarmpause", boolean)
-
     }
 
     function keyfunctions() {
