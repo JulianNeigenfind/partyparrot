@@ -3,15 +3,15 @@ javascript:(function () {
     const domain = 'http://neigenfind.bplaced.net/';
     const parrotId = "partyParrotTest";
     const bannerId = "banner";
+    const extraDivId = "extradiv";
     let alarmpause = false;
     let dontRefresh = false;
-    let mainSource = "", angrySource, resetSource, muteSource;
+    let mainSource = "", angrySource, resetSource, muteSource, bubbleSource;
     let defaultwidth = 101, currentWidth = defaultwidth;
     let maxStringLength = 44;
     let lastResponse, lastHighTimestamp;
-    getHighsAsArray().then(response => {
+    getHighsAsObject().then(response => {
         lastResponse = response;
-        lastHighTimestamp = response.length > 0 ? response[0].sort[0] : null;
     });
     let timeStampRemove = null;
     let containers = [...document.getElementsByClassName("react-grid-item react-draggable react-resizable")].filter(function (element, index) {
@@ -38,7 +38,7 @@ javascript:(function () {
     setInterval(function () {
         parrot();
         cutalarms();
-        orderLegend();
+        /*orderLegend();*/
         parrotalarms();
         resetParrotIfNecessary();
     }, 1000);
@@ -53,6 +53,9 @@ javascript:(function () {
             }),
             fetchNow("thomas").then(object => {
                 resetSource = object.base64;
+            }),
+            fetchNow("bubble").then(object => {
+                bubbleSource = object.base64;
             }),
         ]);
     }
@@ -191,18 +194,10 @@ javascript:(function () {
         let banner = document.getElementById(bannerId);
         if (timeStampRemove != null && timeStampRemove < Date.now()) {
             img.remove();
-            if (banner) {
+            if (banner)
                 banner.remove();
-            }
             timeStampRemove = null;
             dontRefresh = false;
-        } else {
-            if (dontRefresh)
-                return;
-            if (img.src !== mainSource)
-                img.src = mainSource;
-            if (img.style.width !== currentWidth + "px")
-                resizeParrot(currentWidth, false);
         }
     }
 
@@ -250,23 +245,16 @@ javascript:(function () {
     }
 
     function parrotalarms() {
-        getHighsAsArray().then(response => {
-            if (JSON.stringify(lastResponse) !== JSON.stringify(response)) {
-                if (response.length <= 0) {
-                    lastHighTimestamp = null;
-                } else {
-                    let lastHighIndex = lastHighTimestamp !== null ?
-                        response.map(el => el.sort[0]).indexOf(lastHighTimestamp) : response.length;
-                    lastHighIndex = lastHighIndex !== -1 ? lastHighIndex : response.length;
-                    let newHighs = lastHighIndex > 0 ? response.slice(0, lastHighIndex) : [];
-                    if (newHighs.length) {
-                        if (!alarmpause)
-                            angryParrot(newHighs.map(el => el._source["mrs.eventlog.AlarmName"]));
-                        lastHighTimestamp = newHighs[0].sort[0];
-                    }
-                }
-                lastResponse = response;
+        getHighsAsObject().then(response => {
+            if (lastResponse.equals(response))
+                return;
+            let newHighs = response.getAllHighsAfterTimestamp(lastResponse.lastTimestamp);
+            if (newHighs.length) {
+                if (!alarmpause)
+                    angryParrot(newHighs.alarmnames);
+                lastHighTimestamp = response.lastTimestamp;
             }
+            lastResponse = response;
         });
 
         function angryParrot(newHighsNames) {
@@ -274,9 +262,9 @@ javascript:(function () {
             let banner = document.getElementById(bannerId);
             img.src = angrySource;
             dontRefresh = true;
-            if (!banner) {
-                createBanner("Neuer High Alarm!", "red", 698, newHighsNames);
-            }
+            if (banner)
+                banner.remove();
+            createBanner("Neuer High Alarm!", "red", 698, newHighsNames);
             resizeParrot(313, false);
             resetAfter(15);
         }
@@ -288,7 +276,7 @@ javascript:(function () {
         div.style.zIndex = "6001";
         div.style.position = "fixed";
         let bubble = document.createElement("img");
-        bubble.src = "https://s3-us-west-2.amazonaws.com/s.cdpn.io/4273/speech-bubble.svg";
+        bubble.src = bubbleSource;
         bubble.style.position = "fixed";
         bubble.style.width = bubblewidth + "px";
         bubble.style.height = "246px";
@@ -306,14 +294,17 @@ javascript:(function () {
         div.appendChild(text);
         if (extrastringarray !== null) {
             let extradiv = document.createElement("div");
-            extradiv.id = "extradiv";
+            extradiv.id = extraDivId;
             extradiv.style.backgroundColor = "white";
             extradiv.style.position = "fixed";
-            extradiv.style.border = "2px solid black";
+            extradiv.style.border = "2px solid red";
+            setTimeout(function () {
+                extradiv.style.border = "2px solid black";
+            }, 1000);
             extradiv.style.borderRadius = "5px";
             extradiv.style.padding = "5px";
             extradiv.style.bottom = "450px";
-            extrastringarray.forEach((extrastring, index) => {
+            extrastringarray.forEach(extrastring => {
                 let extratext = document.createElement("p");
                 extratext.innerText = extrastring;
                 extratext.style.fontSize = "20px";
@@ -350,8 +341,8 @@ javascript:(function () {
         }
     }
 
-    function getHighsAsArray() {
-        let url = new URL("http://kibana:5601/s/black/elasticsearch/_msearch");
+    function getHighsAsObject() {
+        /*let url = new URL("http://kibana:5601/s/black/elasticsearch/_msearch");
         let rawbody = '{"index":"mrs-eventlog-*"}\n{"version":true,"size":500,"sort":[{"@timestamp":{"order":"desc","unmapped_type":"boolean"}}],"_source":["mrs.eventlog.AlarmName"],"query":{"bool":{"must":[{"match_all":{}},{"match_all":{}}],"filter":[{"match_phrase":{"mrs.eventlog.Source":{"query":"iMosWeb"}}},{"match_phrase":{"mrs.eventlog.AlarmLevel":{"query":"High"}}},{"range":{"@timestamp":{"gte":"now-11h","lte":"now+1h"}}}],"should":[],"must_not":[{"bool":{"minimum_should_match":1,"should":[{"match_phrase":{"mrs.eventlog.SystemName":"REF"}},{"match_phrase":{"mrs.eventlog.SystemName":"DEV"}}]}},{"match_phrase":{"mrs.eventlog.AlarmLevel":{"query":"Info"}}},{"match_phrase":{"mrs.eventlog.confirmed":{"query":"1"}}}]}}}\n';
         let headers = {
             "content-type": "application/x-ndjson",
@@ -361,15 +352,46 @@ javascript:(function () {
             method: 'POST',
             body: rawbody,
             headers: headers
-        })
-        /*const url = new URL(domain + '/getParrot.php');
+        })*/
+        const url = new URL(domain + '/getParrot.php');
         url.search = new URLSearchParams({"parrot": "test"}).toString();
 
-        return fetch(url)*/.then(response => {
+        return fetch(url).then(response => {
             return response.json();
         }).then(data => {
-            return data.responses[0].hits.hits;
+            return new ElasticSearchResponse(data);
         });
+    }
+
+    function ElasticSearchResponse(data) {
+        this.array = data.responses[0].hits.hits.map(el => new ELRElement(el));
+        this.isEmpty = this.array.length <= 0;
+        this.timestamps = this.array.map(el => el.timestamp);
+        this.lastTimestamp = this.isEmpty ? null : this.timestamps[0];
+        this.array.alarmnames = this.array.map(el => el.alarmname);
+
+        this.equals = function (response) {
+            return JSON.stringify(this.array) === JSON.stringify(response.array);
+        };
+
+        this.getAllHighsAfterTimestamp = function (timestamp) {
+            let lastHighIndex;
+            if (timestamp !== null) {
+                lastHighIndex = this.timestamps.indexOf(timestamp);
+                if (lastHighIndex === -1)
+                    lastHighIndex = this.array.length;
+            } else
+                lastHighIndex = this.array.length;
+
+            let highs = lastHighIndex > 0 ? this.array.slice(0, lastHighIndex) : [];
+            highs.alarmnames = highs.map(el => el.alarmname);
+            return highs;
+        };
+    }
+
+    function ELRElement(el) {
+        this.timestamp = el.sort[0];
+        this.alarmname = el._source["mrs.eventlog.AlarmName"];
     }
 
     function setsource(parrot) {
@@ -488,21 +510,21 @@ javascript:(function () {
         }
     }
 
-   /* function orderLegend() {
-        if (legend != null) {
-            legend.prepend(legend.querySelector('[data-label="Middle"]'));
-            legend.prepend(legend.querySelector('[data-label="Low"]'));
-        } else {
-            setTimeout(orderLegend, 100);
-        }
-        cloneLegend();
-    }
+    /* function orderLegend() {
+         if (legend != null) {
+             legend.prepend(legend.querySelector('[data-label="Middle"]'));
+             legend.prepend(legend.querySelector('[data-label="Low"]'));
+         } else {
+             setTimeout(orderLegend, 100);
+         }
+         cloneLegend();
+     }
 
-    function cloneLegend() {
-        let clone = legendContainer.cloneNode(true);
-        clone.style.visibility = "visible";
-        legendContainer.parentNode.prepend(clone);
-    }*/
+     function cloneLegend() {
+         let clone = legendContainer.cloneNode(true);
+         clone.style.visibility = "visible";
+         legendContainer.parentNode.prepend(clone);
+     }*/
 
 })
 ();

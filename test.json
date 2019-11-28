@@ -24,62 +24,10 @@
             "_version": 1,
             "_score": null,
             "_source": {
-              "mrs.eventlog.AlarmName": "i"
+              "mrs.eventlog.AlarmName": "iMosWebBadEntriesForMnpP2List"
             },
             "sort": [
-              1574854204041
-            ]
-          },
-          {
-            "_index": "mrs-eventlog-2019.11.27",
-            "_type": "_doc",
-            "_id": "ZMagrG4BOOq0vurcJ3-Z",
-            "_version": 1,
-            "_score": null,
-            "_source": {
-              "mrs.eventlog.AlarmName": "i"
-            },
-            "sort": [
-              1574854204040
-            ]
-          },
-          {
-            "_index": "mrs-eventlog-2019.11.27",
-            "_type": "_doc",
-            "_id": "ZMagrG4BOOq0vurcJ3-Z",
-            "_version": 1,
-            "_score": null,
-            "_source": {
-              "mrs.eventlog.AlarmName": "i"
-            },
-            "sort": [
-              1574854204039
-            ]
-          },
-          {
-            "_index": "mrs-eventlog-2019.11.27",
-            "_type": "_doc",
-            "_id": "ZMagrG4BOOq0vurcJ3-Z",
-            "_version": 1,
-            "_score": null,
-            "_source": {
-              "mrs.eventlog.AlarmName": "iMosWebBat"
-            },
-            "sort": [
-              1574854204036
-            ]
-          },
-          {
-            "_index": "mrs-eventlog-2019.11.27",
-            "_type": "_doc",
-            "_id": "ZMagrG4BOOq0vurcJ3-Z",
-            "_version": 1,
-            "_score": null,
-            "_source": {
-              "mrs.eventlog.AlarmName": "iMosWebpP2List"
-            },
-            "sort": [
-              1574854204033
+              1574854204068
             ]
           },
           {
@@ -92,7 +40,7 @@
               "mrs.eventlog.AlarmName": "iMosWebBadEntriesForMnpP2List"
             },
             "sort": [
-              1574854204032
+              1574854204051
             ]
           },
           {
@@ -105,7 +53,7 @@
               "mrs.eventlog.AlarmName": "iMosWebBadEntriesForMnpP2List"
             },
             "sort": [
-              1574854204014
+              1574854204058
             ]
           },
           {
@@ -118,7 +66,7 @@
               "mrs.eventlog.AlarmName": "iMosWebBadEntriesForMnpP2List"
             },
             "sort": [
-              1574854204011
+              1574854204051
             ]
           },
           {
@@ -131,7 +79,7 @@
               "mrs.eventlog.AlarmName": "iMosWebBadEntriesForMnpP2List"
             },
             "sort": [
-              1574854204008
+              1574854204048
             ]
           },
           {
@@ -144,7 +92,7 @@
               "mrs.eventlog.AlarmName": "iMosWebBadEntriesForMnpP2List"
             },
             "sort": [
-              1574854204000
+              1574854204047
             ]
           },
           {
@@ -157,7 +105,7 @@
               "mrs.eventlog.AlarmName": "iMosWebBadEntriesForMnpP2List"
             },
             "sort": [
-              1574854204000
+              1574854204046
             ]
           },
           {
@@ -170,20 +118,7 @@
               "mrs.eventlog.AlarmName": "iMosWebBadEntriesForMnpP2List"
             },
             "sort": [
-              1574854204000
-            ]
-          },
-          {
-            "_index": "mrs-eventlog-2019.11.27",
-            "_type": "_doc",
-            "_id": "ZMagrG4BOOq0vurcJ3-Z",
-            "_version": 1,
-            "_score": null,
-            "_source": {
-              "mrs.eventlog.AlarmName": "iMosWebBadEntriesForMnpP2List"
-            },
-            "sort": [
-              1574854204021
+              1574854204045
             ]
           }
         ]
