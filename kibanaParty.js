@@ -1,13 +1,9 @@
 javascript:(function () {
     const intervalInMs = 1000;
     const domain = 'http://neigenfind.bplaced.net/';
-    const parrotId = "partyParrotTest";
-    const bannerId = "banner";
-    const extraDivId = "extradiv";
-    const muteId = "mute";
-    let alarmpause = false;
-    let dontRefresh = false;
-    let mainSource = "", angrySource, resetSource, muteSource, bubbleSource;
+    const parrotId = "partyParrotTest", bannerId = "banner", extraDivId = "extradiv", muteId = "mute";
+    let alarmpause = false, dontRefresh = false;
+    let mainSource, angrySource, resetSource, muteSource, bubbleSource;
     let defaultwidth = 101, currentWidth = defaultwidth;
     let maxStringLength = 44;
     let lastResponse, lastHighTimestamp;
@@ -118,18 +114,16 @@ javascript:(function () {
 
 
     function removeButton() {
-        let button = document.getElementsByClassName("dshExitFullScreenButton")[0];
-        if (button != null) {
-            button.parentNode.removeChild(button);
-        } else {
+        let button = Element.from(document.getElementsByClassName("dshExitFullScreenButton")[0]);
+        if (!button.remove()) {
             setTimeout(removeButton, 100);
         }
     }
 
     function parrot() {
         const d = new Date();
-        if (!document.getElementById(parrotId)) {
-            appendToScreen(createImg(d));
+        if (!Element.getElementById(parrotId).exists) {
+            createImg(d).appendToScreen();
         } else {
             let banner = document.getElementById(bannerId);
             for (let i = 0; i <= 24; i++) {
@@ -143,26 +137,21 @@ javascript:(function () {
     }
 
     function createImg() {
-        let div = document.createElement("div");
-        div.style.position = "fixed";
-        div.style.zIndex = "2147483646";
-        div.style.left = "0px";
-        div.style.bottom = "-5px";
-        div.draggable = false;
-        div.style.userSelect = "none";
+        let div = Element.create("div")
+            .fixed()
+            .z(2147483646)
+            .left(0)
+            .bottom(-5);
+        div.element.draggable = false;
+        div.element.style.userSelect = "none";
 
-        let img = document.createElement("img");
-        img.id = parrotId;
-        img.style.width = defaultwidth + "px";
-        img.crossOrigin = "";
-        img.src = mainSource;
-
-        div.appendChild(img);
+        let img = Element.create("img")
+            .id(parrotId)
+            .width(defaultwidth)
+            .src(mainSource)
+            .appendTo(div);
+        img.element.crossOrigin = "";
         return div;
-    }
-
-    function appendToScreen(element) {
-        document.body.prepend(element);
     }
 
     function post(php, name, value) {
@@ -177,7 +166,7 @@ javascript:(function () {
     }
 
     function resizeParrot(px, shouldpost) {
-        let img = document.getElementById(parrotId);
+        let img = Element.getElementById(parrotId);
         img.style.width = px + "px";
         currentWidth = px;
 
@@ -253,10 +242,10 @@ javascript:(function () {
                 if (!alarmpause) {
                     angryParrot(newHighs.getAlarmnames());
                 } else {
-                    let mute = document.getElementById(muteId);
-                    mute.style.filter = "brightness(0.5) sepia(1) saturate(1000%)";
+                    let mute = Element.getElementById(muteId);
+                    mute.filter("brightness(0.5) sepia(1) saturate(1000%)");
                     setTimeout(function () {
-                        mute.style.filter = "";
+                        mute.filter("");
                     }, 1000);
                 }
                 lastHighTimestamp = response.lastTimestamp;
@@ -265,65 +254,186 @@ javascript:(function () {
         });
 
         function angryParrot(newHighsNames) {
-            let img = document.getElementById(parrotId);
-            let banner = document.getElementById(bannerId);
-            img.src = angrySource;
+            Element.getElementById(parrotId)
+                .src(angrySource);
+            Element.getElementById(bannerId)
+                .safeRemove();
             dontRefresh = true;
-            if (banner)
-                banner.remove();
             createBanner("Neuer High Alarm!", "red", 698, newHighsNames);
             resizeParrot(313, false);
             resetAfter(15);
         }
     }
 
-    function createBanner(string, color, bubblewidth, extrastringarray = null) {
-        let div = document.createElement("div");
-        div.id = bannerId;
-        div.style.zIndex = "6001";
-        div.style.position = "fixed";
-        let bubble = document.createElement("img");
-        bubble.src = bubbleSource;
-        bubble.style.position = "fixed";
-        bubble.style.width = bubblewidth + "px";
-        bubble.style.height = "246px";
-        bubble.style.bottom = "191px";
-        bubble.style.left = "186px";
-        let text = document.createElement("div");
-        text.innerText = string;
-        text.style.fontSize = "60px";
-        text.style.color = color;
-        text.style.textShadow = "-2px 0 black, 0 2px black, 2px 0 black, 0 -2px black";
-        text.style.position = "fixed";
-        text.style.bottom = "330px";
-        text.style.left = "289px";
-        div.appendChild(bubble);
-        div.appendChild(text);
-        if (extrastringarray !== null) {
-            let extradiv = document.createElement("div");
-            extradiv.id = extraDivId;
-            extradiv.style.backgroundColor = "white";
-            extradiv.style.position = "fixed";
-            extradiv.style.border = "2px solid red";
-            setTimeout(function () {
-                extradiv.style.border = "2px solid black";
-            }, 1000);
-            extradiv.style.borderRadius = "5px";
-            extradiv.style.padding = "5px";
-            extradiv.style.bottom = "450px";
-            extrastringarray.forEach(extrastring => {
-                let extratext = document.createElement("p");
-                extratext.innerText = extrastring;
-                extratext.style.fontSize = "20px";
-                extratext.style.color = "black";
-                extradiv.appendChild(extratext);
-            });
-            div.appendChild(extradiv);
+    class Element {
+        constructor(element) {
+            this.element = element;
         }
-        appendToScreen(div);
+
+        exists() {
+            return !!this.element;
+        }
+
+        id(id) {
+            this.element.id = id;
+            return this;
+        }
+
+        fixed() {
+            this.element.style.position = "fixed";
+            return this;
+        }
+
+        width(widthinpx) {
+            this.element.style.width = widthinpx + "px";
+            return this;
+        }
+
+        height(heightinpx) {
+            this.element.style.height = heightinpx + "px";
+            return this;
+        }
+
+        bottom(bottominpx) {
+            this.element.style.bottom = bottominpx + "px";
+            return this;
+        }
+
+        left(leftinpx) {
+            this.element.style.left = leftinpx + "px";
+            return this;
+        }
+
+        backgroundColor(color) {
+            this.element.style.backgroundColor = color;
+            return this;
+        }
+
+        z(number) {
+            this.element.style.zIndex = number.toString();
+            return this;
+        }
+
+        fontSize(fontSizeinpx) {
+            this.element.style.fontSize = fontSizeinpx + "px";
+            return this;
+        }
+
+        color(string) {
+            this.element.style.color = string;
+            return this;
+        }
+
+        textShadow(string) {
+            this.element.style.textShadow = string;
+            return this;
+        }
+
+        border(initialcolor, colorafter1second) {
+            this.element.style.border = "2px solid " + initialcolor;
+            this.element.style.borderRadius = "5px";
+            if (colorafter1second !== undefined) {
+                setTimeout(function () {
+                    this.element.style.border = "2px solid " + colorafter1second;
+                }, 1000);
+            }
+            return this;
+        }
+
+        padding(paddinginpx) {
+            this.element.style.padding = paddinginpx + "px";
+            return this;
+        }
+
+        src(string) {
+            this.element.src = string;
+            return this;
+        }
+
+        appendTo(element) {
+            element.element.appendChild(this.element);
+            return this;
+        }
+
+        text(string) {
+            this.element.innerText = string;
+            return this;
+        }
+
+        filter(string) {
+            this.element.style.filter = string;
+            return this;
+        }
+
+        appendToScreen() {
+            document.body.prepend(this.element);
+            return this;
+        }
+
+        safeRemove() {
+            const exists = !!this.element;
+            if (this.element) {
+                this.element.remove();
+            }
+
+            return exists;
+        }
+
+        static create(tagName) {
+            return new Element(document.createElement(tagName));
+        }
+
+        static from(element) {
+            return new Element(element);
+        }
+
+        static getElementById(string) {
+            return new Element(document.getElementById(string));
+        }
+    }
+
+    function createBanner(string, color, bubblewidth, extrastringarray = null) {
+        let div = Element.create("div")
+            .id(bannerId)
+            .z("6001")
+            .fixed();
+        let bubble = Element.create("img")
+            .src(bubbleSource)
+            .fixed()
+            .width(bubblewidth)
+            .height(246)
+            .bottom(191)
+            .left(186);
+        let text = Element.create("div")
+            .text(string)
+            .fontSize(60)
+            .color(color)
+            .textShadow("-2px 0 black, 0 2px black, 2px 0 black, 0 -2px black")
+            .fixed()
+            .bottom(330)
+            .left(289);
+        bubble.appendTo(div);
+        text.appendTo(div);
         if (extrastringarray !== null) {
-            let extradiv = document.getElementById("extradiv");
-            extradiv.style.left = (186 + bubblewidth / 2 - extradiv.offsetWidth / 2) + "px";
+            var extradiv = Element.create("div")
+                .id(extraDivId)
+                .backgroundColor("white")
+                .fixed()
+                .border("red", "black")
+                .padding(5)
+                .bottom(450)
+                .appendTo(div);
+            extrastringarray.forEach(extrastring => {
+                Element.create("p")
+                    .text(extrastring)
+                    .fontSize(20)
+                    .color("black")
+                    .appendTo(extradiv);
+            });
+        }
+        div.appendToScreen();
+        if (extrastringarray !== null) {
+            extradiv.left(186 + bubblewidth / 2 - extradiv.offsetWidth / 2);
         }
     }
 
@@ -359,7 +469,7 @@ javascript:(function () {
     function fetchAlarms(test) {
         if (!test) {
             let url = new URL("http://kibana:5601/s/black/elasticsearch/_msearch");
-            let rawbody = '{"index":"mrs-eventlog-*"}\n{"version":true,"size":500,"sort":[{"@timestamp":{"order":"desc","unmapped_type":"boolean"}}],"_source":["mrs.eventlog.AlarmName"],"query":{"bool":{"must":[{"match_all":{}},{"match_all":{}}],"filter":[{"match_phrase":{"mrs.eventlog.Source":{"query":"iMosWeb"}}},{"match_phrase":{"mrs.eventlog.AlarmLevel":{"query":"High"}}},{"range":{"@timestamp":{"gte":"now-11h","lte":"now+1h"}}}],"should":[],"must_not":[{"bool":{"minimum_should_match":1,"should":[{"match_phrase":{"mrs.eventlog.SystemName":"REF"}},{"match_phrase":{"mrs.eventlog.SystemName":"DEV"}}]}},{"match_phrase":{"mrs.eventlog.AlarmLevel":{"query":"Info"}}},{"match_phrase":{"mrs.eventlog.confirmed":{"query":"1"}}}]}}}\n';
+            let rawbody = '{"index":"mrs-eventlog-*"}\n{"version":true,"size":500,"sort":[{"@timestamp":{"order":"desc","unmapped_type":"boolean"}}],"_source":["mrs.eventlog.AlarmName"],"query":{"bool":{"must":[{"match_all":{}},{"match_all":{}}],"this.element":[{"match_phrase":{"mrs.eventlog.Source":{"query":"iMosWeb"}}},{"match_phrase":{"mrs.eventlog.AlarmLevel":{"query":"High"}}},{"range":{"@timestamp":{"gte":"now-11h","lte":"now+1h"}}}],"should":[],"must_not":[{"bool":{"minimum_should_match":1,"should":[{"match_phrase":{"mrs.eventlog.SystemName":"REF"}},{"match_phrase":{"mrs.eventlog.SystemName":"DEV"}}]}},{"match_phrase":{"mrs.eventlog.AlarmLevel":{"query":"Info"}}},{"match_phrase":{"mrs.eventlog.confirmed":{"query":"1"}}}]}}}\n';
             let headers = {
                 "content-type": "application/x-ndjson",
                 "kbn-xsrf": "set"
@@ -376,17 +486,19 @@ javascript:(function () {
         }
     }
 
-    function ElasticSearchResponse(data) {
-        this.array = ResponseArray.from(data.responses[0].hits.hits.map(el => new ELRElement(el)));
-        this.isEmpty = this.array.length <= 0;
-        this.timestamps = this.array.map(el => el.timestamp);
-        this.lastTimestamp = this.isEmpty ? null : this.timestamps[0];
+    class ElasticSearchResponse {
+        constructor(data) {
+            this.array = ResponseArray.from(data.responses[0].hits.hits.map(el => new ELRElement(el)));
+            this.isEmpty = this.array.length <= 0;
+            this.timestamps = this.array.map(el => el.timestamp);
+            this.lastTimestamp = this.isEmpty ? null : this.timestamps[0];
+        }
 
-        this.equals = function (response) {
+        equals = function (response) {
             return JSON.stringify(this.array) === JSON.stringify(response.array);
         };
 
-        this.getAllHighsAfterTimestamp = function (timestamp) {
+        getAllHighsAfterTimestamp = function (timestamp) {
             let lastHighIndex;
             if (timestamp !== null) {
                 lastHighIndex = this.timestamps.indexOf(timestamp);
@@ -406,7 +518,7 @@ javascript:(function () {
     }
 
     class ResponseArray extends Array {
-        getAlarmnames () {
+        getAlarmnames() {
             return this.map(el => el.alarmname);
         }
     }
